@@ -1,16 +1,20 @@
 'use client';
 
+import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
 import Link from 'next/link';
 
-export default function SignInPage() {
-  const [loading, setLoading] = useState(false);
+function SignInContent() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
+  const errorDescription = searchParams.get('error_description');
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    await signIn('google', { callbackUrl: '/' });
-  };
+  useEffect(() => {
+    if (error === 'Callback') {
+      console.error('NextAuth callback error', errorDescription || error);
+    }
+  }, [error, errorDescription]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -26,11 +30,17 @@ export default function SignInPage() {
           <p className="mt-2 text-gray-600">Sign in to your account to continue</p>
         </div>
 
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
+            <p className="font-semibold mb-1">Sign in failed</p>
+            <p>{errorDescription || error}</p>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <button
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50"
+            onClick={() => signIn('google', { callbackUrl: '/' })}
+            className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5">
               <path
@@ -50,12 +60,27 @@ export default function SignInPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            <span className="text-gray-700 font-medium">
-              {loading ? 'Signing in...' : 'Continue with Google'}
-            </span>
+            <span className="text-gray-700 font-medium">Continue with Google</span>
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h2>
+          </div>
+        </div>
+      }
+    >
+      <SignInContent />
+    </Suspense>
   );
 }
