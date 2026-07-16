@@ -4,20 +4,13 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: '**',
+        protocol: "https",
+        hostname: "**",
       },
     ],
   },
-  experimental: {
-    turbo: {
-      resolveAlias: {},
-    },
-  },
 };
+
+export default nextConfig;
 
 export default nextConfig;
