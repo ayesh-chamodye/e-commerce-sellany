@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb/connection';
 import { User } from '@/models/User';
 import { Category } from '@/models/Category';
