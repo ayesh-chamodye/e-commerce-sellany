@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useAuth } from '@/components/auth/AuthProvider';
 import { useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 
 export function Navbar() {
-  const { user, profile, signOut } = useAuth();
+  const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const user = session?.user as any;
+  const profile = user;
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-200">
@@ -46,26 +48,26 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            {user ? (
+            {status === 'authenticated' && session ? (
               <div className="flex items-center gap-4">
                 <Link href="/list/create" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                   Start Selling
                 </Link>
                 <div className="relative group">
                   <button className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors">
-                    {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
+                    {profile?.image ? (
+                      <img src={profile.image} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                        {profile?.full_name?.charAt(0) || user.email?.charAt(0)}
+                        {profile?.name?.charAt(0) || user?.email?.charAt(0)}
                       </div>
                     )}
                   </button>
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <div className="py-2">
                       <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">{profile?.full_name || 'User'}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="text-sm font-medium text-gray-900">{profile?.name || 'User'}</p>
+                        <p className="text-xs text-gray-500">{user?.email}</p>
                       </div>
                       <Link href="/dashboard/seller" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         Dashboard
@@ -74,7 +76,7 @@ export function Navbar() {
                         My Orders
                       </Link>
                       <button
-                        onClick={signOut}
+                        onClick={() => signOut()}
                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                       >
                         Sign Out
@@ -125,7 +127,7 @@ export function Navbar() {
             <Link href="/inbox" className="block text-sm font-medium text-gray-700 hover:text-indigo-600">
               Inbox
             </Link>
-            {!user && (
+            {!session && (
               <Link href="/auth/signin" className="block text-sm font-medium text-indigo-600">
                 Sign In
               </Link>

@@ -3,68 +3,50 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/auth/AuthProvider';
-import type { Listing, Review, Order } from '@/types/database';
 import Image from 'next/image';
+import { useSession } from 'next-auth/react';
+import { apiFetch } from '@/lib/api';
+import type { IListing, IReview } from '@/types/database';
 
 export default function ServiceDetailPage() {
   const params = useParams();
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const { data: session } = useSession();
+  const [listing, setListing] = useState<IListing | null>(null);
+  const [reviews, setReviews] = useState<(IReview & { reviewer: any })[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showInquiryForm, setShowInquiryForm] = useState(false);
   const [inquiryMessage, setInquiryMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
-  const { user, profile } = useAuth();
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchListing = async () => {
-      const { data } = await supabase
-        .from('listings')
-        .select('*, seller:profiles(*), category:categories(*)')
-        .eq('id', params.id)
-        .single();
-
-      if (data) {
+      try {
+        const data = await apiFetch(`/api/listings/${params.id}`);
         setListing(data);
-        
-        // Increment views
-        await supabase
-          .from('listings')
-          .update({ views: data.views + 1 })
-          .eq('id', params.id);
+        setReviews(data.reviews || []);
+      } catch (error) {
+        console.error('Failed to fetch listing:', error);
+      } finally {
+        setLoading(false);
       }
-
-      const { data: reviewsData } = await supabase
-        .from('reviews')
-        .select('*, reviewer:profiles(*)')
-        .eq('listing_id', params.id)
-        .order('created_at', { ascending: false });
-
-      if (reviewsData) setReviews(reviewsData);
-
-      setLoading(false);
     };
-
     fetchListing();
-  }, [params.id, supabase]);
+  }, [params.id]);
 
   const handleInquiry = async () => {
-    if (!user || !inquiryMessage.trim()) return;
+    if (!session?.user || !inquiryMessage.trim()) return;
     setSubmitting(true);
-
-    await supabase.from('messages').insert({
-      sender_id: user.id,
-      receiver_id: listing?.seller_id,
-      listing_id: listing?.id,
-      subject: `Inquiry about ${listing?.title}`,
-      content: inquiryMessage,
+    await apiFetch('/api/messages', {
+      method: 'POST',
+      body: JSON.stringify({
+        receiverId: listing?.sellerId,
+        listingId: listing?._id,
+        subject: `Inquiry about ${listing?.title}`,
+        content: inquiryMessage,
+      }),
     });
-
     setInquiryMessage('');
     setShowInquiryForm(false);
     setSubmitting(false);
@@ -72,30 +54,24 @@ export default function ServiceDetailPage() {
   };
 
   const handleBuy = async () => {
-    if (!user) {
+    if (!session?.user) {
       alert('Please sign in to purchase');
       return;
     }
     setOrderLoading(true);
-
-    const { data: order, error } = await supabase
-      .from('orders')
-      .insert({
-        buyer_id: user.id,
-        seller_id: listing?.seller_id,
-        listing_id: listing?.id,
-        price: listing?.discount_price || listing?.price,
+    const price = listing!.discountPrice || listing!.price;
+    await apiFetch('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        sellerId: listing!.sellerId,
+        listingId: listing!._id,
+        price,
         quantity: 1,
-        total_amount: listing?.discount_price || listing?.price,
-      })
-      .select()
-      .single();
-
+        totalAmount: price,
+      }),
+    });
     setOrderLoading(false);
-    
-    if (order) {
-      alert('Order placed successfully! Check your orders.');
-    }
+    alert('Order placed successfully! Check your orders.');
   };
 
   if (loading) {
@@ -126,8 +102,8 @@ export default function ServiceDetailPage() {
     );
   }
 
-  const price = listing.discount_price || listing.price;
-  const isOwner = user?.id === listing.seller_id;
+  const price = listing.discountPrice || listing.price;
+  const isOwner = session?.user?.id === listing.sellerId;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -171,13 +147,13 @@ export default function ServiceDetailPage() {
           </div>
 
           {/* Video */}
-          {(listing.youtube_url || listing.video_url) && (
+          {(listing.youtubeUrl || listing.videoUrl) && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Video</h3>
               <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                {listing.youtube_url ? (
+                {listing.youtubeUrl ? (
                   <iframe
-                    src={`https://www.youtube.com/embed/${listing.youtube_url.split('watch?v=')[1] || listing.youtube_url.split('/').pop()}`}
+                    src={`https://www.youtube.com/embed/${listing.youtubeUrl.split('watch?v=')[1] || listing.youtubeUrl.split('/').pop()}`}
                     title="Video"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
@@ -185,7 +161,7 @@ export default function ServiceDetailPage() {
                   />
                 ) : (
                   <video controls className="w-full h-full">
-                    <source src={listing.video_url!} />
+                    <source src={listing.videoUrl!} />
                   </video>
                 )}
               </div>
@@ -208,13 +184,13 @@ export default function ServiceDetailPage() {
             )}
 
             <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-gray-100">
-              {listing.delivery_time && (
+              {listing.deliveryTime && (
                 <div>
                   <p className="text-sm text-gray-500">Delivery Time</p>
-                  <p className="font-medium text-gray-900">{listing.delivery_time} days</p>
+                  <p className="font-medium text-gray-900">{listing.deliveryTime} days</p>
                 </div>
               )}
-              {listing.revisions && (
+              {listing.revisions !== undefined && (
                 <div>
                   <p className="text-sm text-gray-500">Revisions</p>
                   <p className="font-medium text-gray-900">{listing.revisions}</p>
@@ -233,16 +209,16 @@ export default function ServiceDetailPage() {
             ) : (
               <div className="space-y-6">
                 {reviews.map((review) => (
-                  <div key={review.id} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
+                  <div key={review._id as any} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
-                        {review.reviewer?.avatar_url && (
-                          <Image src={review.reviewer.avatar_url} alt="" fill className="object-cover" />
+                        {review.reviewer?.image && (
+                          <Image src={review.reviewer.image} alt="" fill className="object-cover" />
                         )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-gray-900">{review.reviewer?.full_name}</span>
+                          <span className="font-medium text-gray-900">{review.reviewer?.name}</span>
                           <div className="flex">
                             {[...Array(5)].map((_, i) => (
                               <svg
@@ -270,12 +246,12 @@ export default function ServiceDetailPage() {
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
             <div className="mb-6">
-              {listing.discount_price ? (
+              {listing.discountPrice ? (
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-indigo-600">${listing.discount_price}</span>
+                  <span className="text-3xl font-bold text-indigo-600">${listing.discountPrice}</span>
                   <span className="text-xl text-gray-500 line-through">${listing.price}</span>
                   <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                    Save {listing.discount_percentage}%
+                    Save {listing.discountPercentage}%
                   </span>
                 </div>
               ) : (
@@ -330,13 +306,13 @@ export default function ServiceDetailPage() {
               <h4 className="font-semibold text-gray-900 mb-3">Seller</h4>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden">
-                  {listing.seller?.avatar_url && (
-                    <Image src={listing.seller.avatar_url} alt="" fill className="object-cover" />
+                  {listing.seller?.image && (
+                    <Image src={listing.seller.image} alt="" fill className="object-cover" />
                   )}
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">{listing.seller?.full_name}</p>
-                  <p className="text-sm text-gray-500">{listing.sales} sales</p>
+                  <p className="font-medium text-gray-900">{listing.seller?.name}</p>
+                  <p className="text-sm text-gray-500">{listing.sales || 0} sales</p>
                 </div>
               </div>
             </div>

@@ -2,53 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/auth/AuthProvider';
-import type { Message } from '@/types/database';
+import { useSession } from 'next-auth/react';
+import { apiFetch } from '@/lib/api';
+import type { IMessage } from '@/types/database';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function InboxPage() {
-  const { user } = useAuth();
-  const [conversations, setConversations] = useState<{ partnerId: string; partner: any; lastMessage: Message }[]>([]);
+  const { data: session } = useSession();
+  const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
-    if (!user) return;
-
     const fetchConversations = async () => {
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('*, sender:profiles(*), receiver:profiles(*)')
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
-
-      if (messages) {
-        const convMap = new Map<string, { partner: any; lastMessage: Message }>();
-        
-        for (const msg of messages) {
-          const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
-          if (!convMap.has(partnerId)) {
-            convMap.set(partnerId, {
-              partner: msg.sender_id === user.id ? msg.receiver : msg.sender,
-              lastMessage: msg,
-            });
-          }
-        }
-
-        setConversations(Array.from(convMap.entries()).map(([partnerId, data]) => ({
-          partnerId,
-          partner: data.partner,
-          lastMessage: data.lastMessage,
-        })));
+      if (!session?.user?.id) return;
+      try {
+        const convs = await apiFetch('/api/messages');
+        setConversations(convs);
+      } catch (error) {
+        console.error('Failed to fetch conversations:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-
     fetchConversations();
-  }, [user, supabase]);
+  }, [session]);
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -86,23 +65,23 @@ export default function InboxPage() {
                 className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
-                  {conv.partner?.avatar_url ? (
-                    <img src={conv.partner.avatar_url} alt="" className="w-full h-full object-cover" />
+                  {conv.partner?.image ? (
+                    <img src={conv.partner.image} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-gray-600">
-                      {conv.partner?.full_name?.charAt(0)}
+                      {conv.partner?.name?.charAt(0)}
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-medium text-gray-900 truncate">{conv.partner?.full_name}</h3>
+                    <h3 className="font-medium text-gray-900 truncate">{conv.partner?.name}</h3>
                     <span className="text-xs text-gray-500 flex-shrink-0">
-                      {formatDistanceToNow(new Date(conv.lastMessage.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  <p className={`text-sm truncate ${conv.lastMessage.sender_id === user.id ? 'text-gray-500' : 'text-gray-700 font-medium'}`}>
-                    {conv.lastMessage.sender_id === user.id ? 'You: ' : ''}{conv.lastMessage.content}
+                  <p className={`text-sm truncate ${conv.lastMessage.senderId === session.user.id ? 'text-gray-500' : 'text-gray-700 font-medium'}`}>
+                    {conv.lastMessage.senderId === session.user.id ? 'You: ' : ''}{conv.lastMessage.content}
                   </p>
                 </div>
               </Link>

@@ -2,81 +2,84 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/auth/AuthProvider';
-import type { Category } from '@/types/database';
+import { useSession } from 'next-auth/react';
+import type { ICategory } from '@/types/database';
+import { apiFetch } from '@/lib/api';
+import { createListing } from '@/app/actions/createListing';
 
 export default function CreateListingPage() {
   const router = useRouter();
-  const { user, profile, loading } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { data: session, status } = useSession();
+  const [categories, setCategories] = useState<ICategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     price: '',
-    discount_price: '',
-    category_id: '',
+    discountPrice: '',
+    categoryId: '',
     type: 'service',
-    delivery_time: '',
+    deliveryTime: '',
     revisions: '',
     tags: '',
     images: '',
-    youtube_url: '',
+    youtubeUrl: '',
   });
 
-  const supabase = createClient();
-
   useEffect(() => {
-    if (!loading && (!user || profile?.role !== 'seller')) {
-      router.push('/auth/signin');
+    if (status === 'authenticated' && session?.user) {
+      const user = session.user as any;
+      if (user.role !== 'seller') {
+        router.push('/');
+      }
     }
-
     const fetchCategories = async () => {
-      const { data } = await supabase.from('categories').select('*');
-      if (data) setCategories(data);
+      try {
+        const cats = await apiFetch('/api/categories');
+        setCategories(cats);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
     };
     fetchCategories();
-  }, [user, profile, loading, router, supabase]);
+  }, [session, status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!session?.user) return;
     setSubmitting(true);
 
     const images = formData.images.split(',').map(img => img.trim()).filter(Boolean);
     const tags = formData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
     
-    const youtubeMatch = formData.youtube_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
-    const youtube_url = youtubeMatch ? youtubeMatch[1] : formData.youtube_url;
+    const youtubeMatch = formData.youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
+    const youtubeUrl = youtubeMatch ? youtubeMatch[1] : formData.youtubeUrl;
 
-    const { data, error } = await supabase
-      .from('listings')
-      .insert({
-        seller_id: user.id,
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
-        discount_percentage: formData.discount_price ? Math.round((1 - parseFloat(formData.discount_price) / parseFloat(formData.price)) * 100) : null,
-        category_id: formData.category_id || null,
-        type: formData.type,
-        delivery_time: formData.delivery_time ? parseInt(formData.delivery_time) : null,
-        revisions: formData.revisions ? parseInt(formData.revisions) : null,
-        tags,
-        images,
-        youtube_url: youtube_url || null,
-      })
-      .select()
-      .single();
+    const discountPercentage = formData.discountPrice 
+      ? Math.round((1 - parseFloat(formData.discountPrice) / parseFloat(formData.price)) * 100) 
+      : undefined;
+
+    await createListing({
+      sellerId: (session.user as any).id,
+      title: formData.title,
+      description: formData.description,
+      price: parseFloat(formData.price),
+      discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : undefined,
+      discountPercentage,
+      categoryId: formData.categoryId || undefined,
+      type: formData.type as any,
+      deliveryTime: formData.deliveryTime ? parseInt(formData.deliveryTime) : undefined,
+      revisions: formData.revisions ? parseInt(formData.revisions) : undefined,
+      tags,
+      images,
+      youtubeUrl: youtubeUrl || undefined,
+    });
 
     setSubmitting(false);
-    if (data) {
-      router.push(`/services/${data.id}`);
-    }
+    router.push('/marketplace');
   };
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse space-y-4">
@@ -136,13 +139,13 @@ export default function CreateListingPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
             <select
-              value={formData.category_id}
-              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+              value={formData.categoryId}
+              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             >
               <option value="">Select category</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option key={cat._id as any} value={cat._id as any}>{cat.name}</option>
               ))}
             </select>
           </div>
@@ -169,8 +172,8 @@ export default function CreateListingPage() {
               type="number"
               min="0"
               step="0.01"
-              value={formData.discount_price}
-              onChange={(e) => setFormData({ ...formData, discount_price: e.target.value })}
+              value={formData.discountPrice}
+              onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
               placeholder="79.99 (optional)"
             />
@@ -183,8 +186,8 @@ export default function CreateListingPage() {
             <input
               type="number"
               min="1"
-              value={formData.delivery_time}
-              onChange={(e) => setFormData({ ...formData, delivery_time: e.target.value })}
+              value={formData.deliveryTime}
+              onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
               placeholder="3"
             />
@@ -218,8 +221,8 @@ export default function CreateListingPage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">YouTube URL (optional)</label>
           <input
             type="text"
-            value={formData.youtube_url}
-            onChange={(e) => setFormData({ ...formData, youtube_url: e.target.value })}
+            value={formData.youtubeUrl}
+            onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             placeholder="https://www.youtube.com/watch?v=..."
           />

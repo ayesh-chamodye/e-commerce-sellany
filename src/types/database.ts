@@ -1,104 +1,102 @@
-export type Profile = {
+export interface IUser {
+  _id?: string;
   id: string;
+  name?: string;
   email: string;
-  full_name: string;
-  avatar_url: string;
+  emailVerified?: Date;
+  image?: string;
   role: 'buyer' | 'seller' | 'admin';
-  bio: string;
-  location: string;
-  website: string;
-  phone: string;
-  created_at: string;
-  updated_at: string;
-};
+  bio?: string;
+  location?: string;
+  website?: string;
+  phone?: string;
+  accounts?: any[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
-export type Category = {
-  id: string;
+export interface ICategory {
+  _id?: string;
   name: string;
   slug: string;
-  description: string;
-  icon: string;
-  created_at: string;
-};
+  description?: string;
+  icon?: string;
+  createdAt?: Date;
+}
 
-export type Listing = {
-  id: string;
-  seller_id: string;
+export interface IListing {
+  _id?: string;
+  sellerId: string;
+  seller?: {
+    name?: string;
+    email?: string;
+    image?: string;
+  };
   title: string;
   description: string;
   price: number;
-  discount_price: number | null;
-  discount_percentage: number | null;
-  category_id: string | null;
+  discountPrice?: number;
+  discountPercentage?: number;
+  categoryId?: string;
   type: 'service' | 'goods' | 'account';
   status: 'active' | 'inactive' | 'sold' | 'pending';
   images: string[];
-  video_url: string | null;
-  youtube_url: string | null;
+  videoUrl?: string;
+  youtubeUrl?: string;
   tags: string[];
-  delivery_time: number | null;
-  revisions: number | null;
+  deliveryTime?: number;
+  revisions?: number;
   views: number;
   sales: number;
   rating: number;
-  review_count: number;
+  reviewCount: number;
   featured: boolean;
-  created_at: string;
-  updated_at: string;
-  seller?: Profile;
-  category?: Category;
-};
+  createdAt?: Date;
+  updatedAt?: Date;
+  reviews?: (IReview & { reviewer: any })[];
+}
 
-export type Order = {
-  id: string;
-  buyer_id: string;
-  seller_id: string;
-  listing_id: string;
+export interface IOrder {
+  _id?: string;
+  buyerId: string;
+  sellerId: string;
+  listingId: string;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'refunded';
   price: number;
   quantity: number;
-  total_amount: number;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-  buyer?: Profile;
-  seller?: Profile;
-  listing?: Listing;
-};
+  totalAmount: number;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
-export type Message = {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  order_id: string | null;
-  listing_id: string | null;
-  subject: string | null;
+export interface IMessage {
+  _id?: string;
+  senderId: string;
+  receiverId: string;
+  orderId?: string;
+  listingId?: string;
+  subject?: string;
   content: string;
   read: boolean;
-  parent_id: string | null;
-  created_at: string;
-  sender?: Profile;
-  receiver?: Profile;
-};
+  parentId?: string;
+  createdAt?: Date;
+}
 
-export type Review = {
-  id: string;
-  order_id: string;
-  reviewer_id: string;
-  reviewee_id: string;
-  listing_id: string;
+export interface IReview {
+  _id?: string;
+  orderId: string;
+  reviewerId: string;
+  revieweeId: string;
+  listingId: string;
   rating: number;
-  content: string;
-  created_at: string;
-  reviewer?: Profile;
-  reviewee?: Profile;
-  listing?: Listing;
-};
+  content?: string;
+  createdAt?: Date;
+}
 
-export type Favorite = {
-  id: string;
-  user_id: string;
-  listing_id: string;
-  created_at: string;
-  listing?: Listing;
-};
+export interface IFavorite {
+  _id?: string;
+  userId: string;
+  listingId: string;
+  createdAt?: Date;
+}

@@ -3,89 +3,41 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/auth/AuthProvider';
-import type { Message } from '@/types/database';
+import { useSession } from 'next-auth/react';
+import { apiFetch } from '@/lib/api';
+import type { IMessage } from '@/types/database';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function ConversationPage() {
   const params = useParams();
   const partnerId = params.id as string;
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { data: session } = useSession();
+  const [messages, setMessages] = useState<(IMessage & { sender: any; receiver: any })[]>([]);
   const [partner, setPartner] = useState<any>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
 
   useEffect(() => {
-    if (!user) return;
-
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('messages')
-        .select('*, sender:profiles(*), receiver:profiles(*)')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
-        .order('created_at', { ascending: true });
-
-      if (data) {
-        setMessages(data);
-        // Mark as read
-        await supabase
-          .from('messages')
-          .update({ read: true })
-          .eq('receiver_id', user.id)
-          .eq('sender_id', partnerId);
-      }
-
-      const { data: partnerData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', partnerId)
-        .single();
-
-      if (partnerData) setPartner(partnerData);
-      setLoading(false);
-    };
-
-    fetchMessages();
-
-    const channel = supabase
-      .channel(`conversation:${user.id}:${partnerId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id}))`,
-        },
-        async (payload) => {
-          const { data } = await supabase
-            .from('messages')
-            .select('*, sender:profiles(*), receiver:profiles(*)')
-            .eq('id', payload.new.id)
-            .single();
-          
-          if (data) {
-            setMessages((prev) => [...prev, data]);
-            if (data.receiver_id === user.id) {
-              await supabase
-                .from('messages')
-                .update({ read: true })
-                .eq('id', data.id);
-            }
-          }
+      if (!session?.user?.id) return;
+      try {
+        const msgs = await apiFetch(`/api/messages?partnerId=${partnerId}`);
+        setMessages(msgs);
+        if (msgs.length > 0) {
+          const firstMsg = msgs[0] as any;
+          const partnerUser = firstMsg.senderId === partnerId ? firstMsg.sender : firstMsg.receiver;
+          setPartner(partnerUser);
         }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+      } catch (error) {
+        console.error('Failed to fetch messages:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [user, partnerId, supabase]);
+    fetchMessages();
+  }, [session, partnerId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,27 +45,22 @@ export default function ConversationPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newMessage.trim()) return;
+    if (!session?.user || !newMessage.trim()) return;
     setSending(true);
 
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: user.id,
-        receiver_id: partnerId,
+    const msg = await apiFetch('/api/messages', {
+      method: 'POST',
+      body: JSON.stringify({
+        receiverId: partnerId,
         content: newMessage.trim(),
-      })
-      .select('*, sender:profiles(*), receiver:profiles(*)')
-      .single();
-
-    if (data) {
-      setMessages((prev) => [...prev, data]);
-      setNewMessage('');
-    }
+      }),
+    });
+    setMessages((prev) => [...prev, msg]);
+    setNewMessage('');
     setSending(false);
   };
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -135,12 +82,10 @@ export default function ConversationPage() {
             </svg>
           </Link>
           <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden">
-            {partner?.avatar_url && (
-              <img src={partner.avatar_url} alt="" className="w-full h-full object-cover" />
-            )}
+            {partner?.image && <img src={partner.image} alt="" className="w-full h-full object-cover" />}
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">{partner?.full_name || 'User'}</h2>
+            <h2 className="font-semibold text-gray-900">{partner?.name || 'User'}</h2>
             <p className="text-sm text-gray-500">{partner?.email}</p>
           </div>
         </div>
@@ -156,29 +101,32 @@ export default function ConversationPage() {
               <p className="text-gray-500">No messages yet. Start the conversation!</p>
             </div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
-              >
+            messages.map((msg) => {
+              const senderId = (msg as any).senderId;
+              return (
                 <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                    msg.sender_id === user.id
-                      ? 'bg-indigo-600 text-white rounded-br-md'
-                      : 'bg-gray-100 text-gray-900 rounded-bl-md'
-                  }`}
+                  key={msg._id as any}
+                  className={`flex ${senderId === session.user.id ? 'justify-end' : 'justify-start'}`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      msg.sender_id === user.id ? 'text-indigo-200' : 'text-gray-500'
+                  <div
+                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                      senderId === session.user.id
+                        ? 'bg-indigo-600 text-white rounded-br-md'
+                        : 'bg-gray-100 text-gray-900 rounded-bl-md'
                     }`}
                   >
-                    {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
-                  </p>
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        senderId === session.user.id ? 'text-indigo-200' : 'text-gray-500'
+                      }`}
+                    >
+                      {formatDistanceToNow(new Date(msg.createdAt || Date.now()), { addSuffix: true })}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>

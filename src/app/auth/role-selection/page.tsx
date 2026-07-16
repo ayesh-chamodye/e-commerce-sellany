@@ -2,41 +2,40 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useSession } from 'next-auth/react';
+import { updateUserRole } from '@/app/actions/updateRole';
+import type { Session } from 'next-auth';
 
 export default function RoleSelectionPage() {
   const router = useRouter();
-  const { user, profile, loading } = useAuth();
+  const { data: session, status } = useSession();
   const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>('buyer');
   const [updating, setUpdating] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/signin');
+    if (status === 'authenticated' && session?.user) {
+      const user = session.user as any;
+      if (user.role && user.role !== 'buyer') {
+        router.push('/');
+      }
     }
-    if (profile?.role && profile.role !== 'buyer') {
-      router.push('/');
-    }
-  }, [user, profile, loading, router]);
+  }, [session, status, router]);
 
   const handleRoleUpdate = async () => {
-    if (!user) return;
+    if (!session?.user) return;
     setUpdating(true);
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: selectedRole })
-      .eq('id', user.id);
-
-    setUpdating(false);
-    if (!error) {
+    
+    try {
+      await updateUserRole((session.user as any).id, selectedRole);
       router.push('/');
+    } catch (error) {
+      console.error('Failed to update role:', error);
+    } finally {
+      setUpdating(false);
     }
   };
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />

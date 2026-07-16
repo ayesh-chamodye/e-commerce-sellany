@@ -2,43 +2,35 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/auth/AuthProvider';
-import type { Order, Favorite } from '@/types/database';
+import { useSession } from 'next-auth/react';
+import { apiFetch } from '@/lib/api';
 
 export default function BuyerDashboardPage() {
-  const { user, profile, loading } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const supabase = createClient();
+  const { data: session } = useSession();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-
     const fetchData = async () => {
-      const [ordersRes, favoritesRes] = await Promise.all([
-        supabase
-          .from('orders')
-          .select('*, seller:profiles(*), listing:listings(*)')
-          .eq('buyer_id', user.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('favorites')
-          .select('*, listing:listings(*)')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false }),
-      ]);
-
-      if (ordersRes.data) setOrders(ordersRes.data);
-      if (favoritesRes.data) setFavorites(favoritesRes.data);
-      setDataLoading(false);
+      if (!session?.user?.id) return;
+      try {
+        const [ordersData, favoritesData] = await Promise.all([
+          apiFetch('/api/orders?role=buyer'),
+          apiFetch('/api/favorites'),
+        ]);
+        setOrders(ordersData);
+        setFavorites(favoritesData);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-
     fetchData();
-  }, [user, supabase]);
+  }, [session]);
 
-  if (loading || dataLoading) {
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse space-y-6">
@@ -49,7 +41,7 @@ export default function BuyerDashboardPage() {
     );
   }
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -84,8 +76,8 @@ export default function BuyerDashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {orders.map((order) => (
-                  <div key={order.id} className="p-4">
+                {orders.map((order: any) => (
+                  <div key={order._id as any} className="p-4">
                     <div className="flex items-start gap-4">
                       <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                         {order.listing?.images?.[0] && (
@@ -94,9 +86,9 @@ export default function BuyerDashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-gray-900 truncate">{order.listing?.title}</h3>
-                        <p className="text-sm text-gray-500">Seller: {order.seller?.full_name}</p>
+                        <p className="text-sm text-gray-500">Seller: {order.seller?.name}</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="font-medium text-gray-900">${order.total_amount}</span>
+                          <span className="font-medium text-gray-900">${order.totalAmount}</span>
                           <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                             order.status === 'completed' ? 'bg-green-100 text-green-700' :
                             order.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
@@ -128,10 +120,10 @@ export default function BuyerDashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {favorites.map((fav) => (
+                {favorites.map((fav: any) => (
                   <Link
-                    key={fav.id}
-                    href={`/services/${fav.listing?.id}`}
+                    key={fav._id as any}
+                    href={`/services/${fav.listing?._id || fav.listingId}`}
                     className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
                   >
                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">

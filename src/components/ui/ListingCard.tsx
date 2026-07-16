@@ -1,15 +1,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import type { Listing } from '@/types/database';
 
 interface ListingCardProps {
-  listing: Listing;
+  listing: any;
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
+  const listingId = listing._id || listing.id;
+
   return (
     <Link
-      href={`/services/${listing.id}`}
+      href={`/services/${listingId}`}
       className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-indigo-300 transition-all duration-200"
     >
       <div className="aspect-video bg-gray-100 relative overflow-hidden">
@@ -44,24 +45,24 @@ export function ListingCard({ listing }: ListingCardProps) {
           <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
-          <span className="text-sm font-medium text-gray-700">{listing.rating.toFixed(1)}</span>
-          <span className="text-sm text-gray-500">({listing.review_count})</span>
+          <span className="text-sm font-medium text-gray-700">{listing.rating?.toFixed(1) || '0.0'}</span>
+          <span className="text-sm text-gray-500">({listing.reviewCount || 0})</span>
         </div>
         <div className="flex items-center justify-between">
           <div>
-            {listing.discount_price ? (
+            {listing.discountPrice ? (
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-indigo-600">${listing.discount_price}</span>
+                <span className="text-lg font-bold text-indigo-600">${listing.discountPrice}</span>
                 <span className="text-sm text-gray-500 line-through">${listing.price}</span>
                 <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                  -{listing.discount_percentage}%
+                  -{listing.discountPercentage}%
                 </span>
               </div>
             ) : (
               <span className="text-lg font-bold text-indigo-600">${listing.price}</span>
             )}
           </div>
-          <span className="text-xs text-gray-500">{listing.sales} sales</span>
+          <span className="text-xs text-gray-500">{listing.sales || 0} sales</span>
         </div>
       </div>
     </Link>

@@ -1,32 +1,31 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/auth/AuthProvider';
-import type { Order } from '@/types/database';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { apiFetch } from '@/lib/api';
 
 export default function OrdersPage() {
-  const { user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const { data: session } = useSession();
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
-    if (!user) return;
     const fetchOrders = async () => {
-      const { data } = await supabase
-        .from('orders')
-        .select('*, seller:profiles(*), listing:listings(*)')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
-      
-      if (data) setOrders(data);
-      setLoading(false);
+      if (!session?.user?.id) return;
+      try {
+        const data = await apiFetch('/api/orders?role=buyer');
+        setOrders(data);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchOrders();
-  }, [user, supabase]);
+  }, [session]);
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -54,8 +53,8 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          {orders.map((order: any) => (
+            <div key={order._id as any} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <span className={`px-3 py-1 text-sm font-medium rounded-full ${
@@ -67,10 +66,10 @@ export default function OrdersPage() {
                     {order.status}
                   </span>
                   <span className="text-sm text-gray-500">
-                    {new Date(order.created_at).toLocaleDateString()}
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">${order.total_amount}</span>
+                <span className="text-lg font-bold text-gray-900">${order.totalAmount}</span>
               </div>
               
               <div className="flex items-center gap-4">
@@ -82,7 +81,7 @@ export default function OrdersPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{order.listing?.title}</h3>
                   <p className="text-sm text-gray-500">
-                    {user.id === order.buyer_id ? `Seller: ${order.seller?.full_name}` : `Buyer: ${order.buyer?.full_name}`}
+                    {session.user.id === order.buyerId ? `Seller: ${order.seller?.name}` : `Buyer: ${order.buyer?.name}`}
                   </p>
                 </div>
               </div>
