@@ -1,8 +1,7 @@
 import { auth } from './config';
 import {
-  signInWithPopup,
-  GoogleAuthProvider,
   signInWithRedirect,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
@@ -11,16 +10,7 @@ import {
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
-  try {
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
-  } catch (error: any) {
-    if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-      await signInWithRedirect(auth, provider);
-      return null;
-    }
-    throw error;
-  }
+  await signInWithRedirect(auth, provider);
 }
 
 export async function signOut() {

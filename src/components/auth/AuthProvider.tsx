@@ -58,7 +58,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    let unsubscribe: (() => void) | undefined;
+
+    const resolveSession = async (fbUser: FirebaseUser | null) => {
+      setFirebaseUser(fbUser);
+      if (fbUser) {
+        try {
+          const intendedRole = sessionStorage.getItem('sellany_intended_role');
+          const url = intendedRole ? `/api/auth/me?role=${encodeURIComponent(intendedRole)}` : '/api/auth/me';
+          sessionStorage.removeItem('sellany_intended_role');
+
+          const idToken = await fbUser.getIdToken(true);
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${idToken}` },
+            cache: 'no-store',
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (mounted) {
+              setUser(data.user);
+            }
+          } else {
+            if (mounted) {
+              setUser(null);
+            }
+          }
+        } catch (error) {
+          console.error('Session resolution error:', error);
+          if (mounted) {
+            setUser(null);
+          }
+        }
+      } else {
+        if (mounted) {
+          setUser(null);
+        }
+      }
+      if (mounted) {
+        setLoading(false);
+      }
+    };
 
     const init = async () => {
       try {
@@ -72,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('getRedirectResult error:', error);
       }
 
-      unsubscribe = listenToAuth(async (fbUser) => {
+      const unsubscribe = listenToAuth(async (fbUser) => {
         console.log('Auth state changed:', fbUser);
         if (mounted) {
           await resolveSession(fbUser);
@@ -82,24 +120,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return unsubscribe;
     };
 
-    let cleanupPromise: Promise<(() => void) | void>;
+    let cleanup: (() => void) | undefined;
 
-    const setup = async () => {
-      cleanupPromise = init();
-    };
-
-    setup();
+    init().then((unsub) => {
+      if (typeof unsub === 'function') {
+        cleanup = unsub;
+      }
+    });
 
     return () => {
       mounted = false;
-      cleanupPromise.then((unsub) => {
-        if (typeof unsub === 'function') {
-          unsub();
-        }
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
-        }
-      });
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
     };
   }, []);
 
