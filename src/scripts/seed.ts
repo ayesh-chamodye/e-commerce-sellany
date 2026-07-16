@@ -1,15 +1,8 @@
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Category } from '@/models/Category';
-import { Listing } from '@/models/Listing';
-import { User } from '@/models/User';
-import { Review } from '@/models/Review';
-
 async function seed() {
   try {
     await connectToDatabase();
     console.log('Connected to MongoDB');
 
-    // Create demo users/sellers
     const userCount = await User.countDocuments();
     if (userCount === 0) {
       await User.create([
@@ -62,10 +55,9 @@ async function seed() {
       console.log('Demo sellers created');
     }
 
-    // Create categories
     const categoryCount = await Category.countDocuments();
     if (categoryCount === 0) {
-      const categories = await Category.insertMany([
+      await Category.insertMany([
         { name: 'Web Development', slug: 'web-development', description: 'Professional web development services', icon: '💻' },
         { name: 'Graphic Design', slug: 'graphic-design', description: 'Logo design, branding, and visual identity', icon: '🎨' },
         { name: 'Digital Marketing', slug: 'digital-marketing', description: 'SEO, social media, and advertising', icon: '📈' },
@@ -80,15 +72,12 @@ async function seed() {
       console.log('Categories seeded');
     }
 
-    // Get categories for listings
     const categories = await Category.find().lean();
     const categoryMap = new Map(categories.map(c => [c.slug, c._id]));
 
-    // Create listings
     const listingCount = await Listing.countDocuments();
     if (listingCount === 0) {
       const listings = [
-        // Tech Solutions Store
         {
           sellerId: 'user-001',
           title: 'Custom Website Development',
@@ -149,7 +138,6 @@ async function seed() {
           featured: false,
           status: 'active',
         },
-        // Creative Design Hub
         {
           sellerId: 'user-002',
           title: 'Professional Logo Design',
@@ -210,7 +198,6 @@ async function seed() {
           featured: false,
           status: 'active',
         },
-        // Digital Marketing Pro
         {
           sellerId: 'user-003',
           title: 'SEO Optimization Package',
@@ -251,7 +238,6 @@ async function seed() {
           featured: false,
           status: 'active',
         },
-        // Code Masters
         {
           sellerId: 'user-004',
           title: 'React Native Mobile App',
@@ -292,7 +278,6 @@ async function seed() {
           featured: false,
           status: 'active',
         },
-        // Media Studio
         {
           sellerId: 'user-005',
           title: 'Professional Video Editing',
@@ -358,7 +343,6 @@ async function seed() {
       await Listing.insertMany(listings);
       console.log('Listings seeded');
 
-      // Create some mock reviews
       const allListings = await Listing.find().lean();
       const demoBuyerId = 'user-buyer-001';
       
@@ -370,7 +354,7 @@ async function seed() {
             reviewerId: demoBuyerId,
             revieweeId: listing.sellerId,
             listingId: listing._id,
-            rating: Math.floor(Math.random() * 2) + 4, // 4 or 5 stars
+            rating: Math.floor(Math.random() * 2) + 4,
             content: 'Great work! Highly recommended. The seller delivered exactly what was promised and the quality exceeded my expectations.',
           });
         }
@@ -379,11 +363,11 @@ async function seed() {
     }
 
     console.log('Seed completed successfully!');
-    process.exit(0);
   } catch (error) {
     console.error('Seed failed:', error);
     process.exit(1);
   }
 }
 
-seed();
+export { seed };
+
