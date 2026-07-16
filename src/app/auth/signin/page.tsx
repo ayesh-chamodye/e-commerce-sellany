@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useSession } from '@/components/auth/AuthProvider';
@@ -12,12 +12,24 @@ function SignInContent() {
   const { user, loading } = useSession();
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
+  const [signInError, setSignInError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
       router.push('/');
     }
   }, [user, loading, router]);
+
+  const handleGoogleSignIn = async () => {
+    setSignInError(null);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in with Google';
+      setSignInError(message);
+      console.error('Google sign-in error:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -33,16 +45,16 @@ function SignInContent() {
           <p className="mt-2 text-gray-600">Sign in to your account to continue</p>
         </div>
 
-        {error && (
+        {(error || signInError) && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
             <p className="font-semibold mb-1">Sign in failed</p>
-            <p>{errorDescription || error}</p>
+            <p>{errorDescription || error || signInError}</p>
           </div>
         )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <button
-            onClick={signInWithGoogle}
+            onClick={handleGoogleSignIn}
             disabled={loading}
             className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50"
           >
