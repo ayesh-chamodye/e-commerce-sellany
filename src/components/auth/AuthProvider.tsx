@@ -57,21 +57,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = listenToAuth((user) => {
-      if (user) {
-        console.log('Current user:', user);
-      }
-      resolveSession(user);
-    });
+    let mounted = true;
+    let unsubscribe: (() => void) | undefined;
 
-    getRedirectUser().then((user) => {
-      if (user) {
-        console.log('Redirect login:', user);
-        resolveSession(user);
+    const init = async () => {
+      try {
+        const redirectResult = await getRedirectUser();
+        console.log('Redirect result:', redirectResult);
+        if (redirectResult && mounted) {
+          await resolveSession(redirectResult);
+          return;
+        }
+      } catch (error) {
+        console.error('getRedirectResult error:', error);
       }
-    });
 
-    return unsubscribe;
+      unsubscribe = listenToAuth(async (fbUser) => {
+        console.log('Auth state changed:', fbUser);
+        if (mounted) {
+          await resolveSession(fbUser);
+        }
+      });
+    };
+
+    const cleanupPromise = init();
+
+    return () => {
+      mounted = false;
+      cleanupPromise.then((unsub) => {
+        if (unsub) unsub();
+        if (unsubscribe) unsubscribe();
+      });
+    };
   }, []);
 
   return <AuthContext.Provider value={{ user, firebaseUser, loading }}>{children}</AuthContext.Provider>;
