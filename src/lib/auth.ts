@@ -49,22 +49,6 @@ export const authOptions: any = {
       }
       return token;
     },
-    async signIn({ user, account }: any) {
-      if (account?.provider === 'google') {
-        await connectToDatabase();
-        const existingUser = await User.findById(user.id);
-        if (!existingUser) {
-          await User.create({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-            role: 'buyer',
-          });
-        }
-      }
-      return true;
-    },
   },
   pages: {
     signIn: '/auth/signin',
