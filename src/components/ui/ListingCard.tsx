@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
+import type { IListing } from '@/types/database';
+
 interface ListingCardProps {
-  listing: any;
+  listing: IListing;
 }
 
 export function ListingCard({ listing }: ListingCardProps) {

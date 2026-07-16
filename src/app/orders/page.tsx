@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
+import type { IOrder, IListing, IUser } from '@/types/database';
 
 export default function OrdersPage() {
   const { user, loading } = useSession();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<(IOrder & { listing?: IListing; seller?: Pick<IUser, 'name'>; buyer?: Pick<IUser, 'name'> })[]>([]);
   const [pageLoading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order: any) => (
+          {orders.map((order) => (
             <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -66,7 +67,7 @@ export default function OrdersPage() {
                     {order.status}
                   </span>
                   <span className="text-sm text-gray-500">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                     {new Date(order.createdAt || '').toLocaleDateString()}
                   </span>
                 </div>
                 <span className="text-lg font-bold text-gray-900">${order.totalAmount}</span>
@@ -75,7 +76,7 @@ export default function OrdersPage() {
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   {order.listing?.images?.[0] && (
-                    <img src={order.listing.images[0]} alt="" className="w-full h-full object-cover" />
+                    <Image src={order.listing.images[0]} alt="" width={80} height={80} className="rounded-lg object-cover" />
                   )}
                 </div>
                 <div className="flex-1">

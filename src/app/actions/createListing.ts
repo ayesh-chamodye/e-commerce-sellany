@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { apiFetch } from '@/lib/api';
 
-export async function createListing(data: any) {
+export async function createListing(data: Record<string, unknown>) {
   try {
     const listing = await apiFetch('/api/listings', {
       method: 'POST',

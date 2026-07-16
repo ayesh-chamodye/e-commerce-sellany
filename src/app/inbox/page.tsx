@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
-import type { IMessage } from '@/types/database';
 import { formatDistanceToNow } from 'date-fns';
+import type { IConversation } from '@/types/database';
 
 export default function InboxPage() {
   const { user, loading } = useSession();
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<IConversation[]>([]);
   const [pageLoading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,9 +66,9 @@ export default function InboxPage() {
                 className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
-                  {conv.partner?.image ? (
-                    <img src={conv.partner.image} alt="" className="w-full h-full object-cover" />
-                  ) : (
+                   {conv.partner?.image ? (
+                     <Image src={conv.partner.image} alt="" width={48} height={48} className="rounded-full object-cover" />
+                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-gray-600">
                       {conv.partner?.name?.charAt(0)}
                     </div>

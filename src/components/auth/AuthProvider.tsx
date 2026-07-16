@@ -25,38 +25,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const resolveSession = async (fbUser: FirebaseUser | null) => {
-    setFirebaseUser(fbUser);
-    if (fbUser) {
-      try {
-        const intendedRole = sessionStorage.getItem('sellany_intended_role');
-        const url = intendedRole ? `/api/auth/me?role=${encodeURIComponent(intendedRole)}` : '/api/auth/me';
-        sessionStorage.removeItem('sellany_intended_role');
-
-        const idToken = await fbUser.getIdToken(true);
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${idToken}` },
-          cache: 'no-store',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-        } else {
-          const text = await res.text();
-          console.error('Failed to load user profile', res.status, text);
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Session resolution error:', error);
-        setUser(null);
-      }
-    } else {
-      setUser(null);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
     let mounted = true;
 

@@ -12,6 +12,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { getDocument } from '@/lib/firebase/firestore';
+import {
+  IListing,
+  IFavorite,
+} from '@/types/database';
 
 export async function GET(request: Request) {
   try {
@@ -25,8 +29,8 @@ export async function GET(request: Request) {
     const q = query(collection(db, 'favorites'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
     const snap = await getDocs(q);
     const favorites = snap.docs.map(async (d) => {
-      const fav = { id: d.id, ...d.data() };
-      const listing = await getDocument<Record<string, unknown>>(`listings/${(fav as any).listingId}`);
+      const fav = { id: d.id, ...d.data() } as IFavorite;
+      const listing = await getDocument<IListing>(`listings/${fav.listingId}`);
       return { ...fav, listing };
     });
 

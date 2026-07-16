@@ -76,7 +76,7 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {categories.map((category) => (
               <Link
-                key={category._id as any}
+                key={category._id as string}
                 href={`/marketplace?category=${category.slug}`}
                 className="group p-6 bg-gray-50 rounded-xl hover:bg-indigo-50 hover:shadow-lg transition-all duration-200 text-center"
               >
@@ -119,7 +119,7 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featuredListings.map((listing) => (
-                <ListingCard key={listing._id as any} listing={listing} />
+                <ListingCard key={listing._id as string} listing={listing} />
               ))}
             </div>
           )}
@@ -168,7 +168,7 @@ export default function Home() {
                 <span className="text-2xl font-bold text-indigo-600">3</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Connect & Trade</h3>
-              <p className="text-gray-600">Message sellers, place orders, and leave reviews. It's that simple!</p>
+              <p className="text-gray-600">Message sellers, place orders, and leave reviews. It&apos;s that simple!</p>
             </div>
           </div>
         </div>

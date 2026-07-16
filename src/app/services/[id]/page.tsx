@@ -6,13 +6,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
-import type { IListing, IReview } from '@/types/database';
+import type { IListing, IReview, IUser } from '@/types/database';
 
 export default function ServiceDetailPage() {
   const params = useParams();
   const { user, loading } = useSession();
   const [listing, setListing] = useState<IListing | null>(null);
-  const [reviews, setReviews] = useState<(IReview & { reviewer: any })[]>([]);
+  const [reviews, setReviews] = useState<(IReview & { reviewer: IUser })[]>([]);
   const [pageLoading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showInquiryForm, setShowInquiryForm] = useState(false);
@@ -102,7 +102,6 @@ export default function ServiceDetailPage() {
     );
   }
 
-  const price = listing.discountPrice || listing.price;
   const isOwner = user?.id === listing.sellerId;
 
   return (

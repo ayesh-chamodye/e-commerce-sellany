@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
+import type { IListing, IOrder, IUser } from '@/types/database';
 
 export default function SellerDashboardPage() {
   const { user, loading } = useSession();
-  const [listings, setListings] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [listings, setListings] = useState<IListing[]>([]);
+  const [orders, setOrders] = useState<(IOrder & { buyer?: Pick<IUser, 'name' | 'image'>; listing?: IListing })[]>([]);
   const [stats, setStats] = useState({ totalListings: 0, totalSales: 0, totalRevenue: 0 });
   const [pageLoading, setLoading] = useState(true);
 
@@ -20,13 +22,13 @@ export default function SellerDashboardPage() {
           apiFetch('/api/listings'),
           apiFetch('/api/orders?role=seller'),
         ]);
-        const myListings = listingsData.filter((l: any) => l.sellerId === user.id);
+        const myListings = (listingsData as IListing[]).filter((l) => l.sellerId === user.id);
         setListings(myListings);
-        setOrders(ordersData);
+        setOrders(ordersData as (IOrder & { buyer?: Pick<IUser, 'name' | 'image'>; listing?: IListing })[]);
         setStats({
           totalListings: myListings.length,
-          totalSales: myListings.reduce((sum: number, l: any) => sum + (l.sales || 0), 0),
-          totalRevenue: myListings.reduce((sum: number, l: any) => sum + (l.sales || 0) * l.price, 0),
+          totalSales: myListings.reduce((sum: number, l: IListing) => sum + (l.sales || 0), 0),
+          totalRevenue: myListings.reduce((sum: number, l: IListing) => sum + (l.sales || 0) * l.price, 0),
         });
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -107,7 +109,7 @@ export default function SellerDashboardPage() {
                   <div key={listing.id} className="p-4 flex items-center gap-4">
                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                       {listing.images?.[0] && (
-                        <img src={listing.images[0]} alt="" className="w-full h-full object-cover" />
+                        <Image src={listing.images[0]} alt="" width={64} height={64} className="object-cover" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -140,11 +142,11 @@ export default function SellerDashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {orders.slice(0, 10).map((order: any) => (
+                 {orders.slice(0, 10).map((order) => (
                   <div key={order.id} className="p-4 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
                       {order.buyer?.image && (
-                        <img src={order.buyer.image} alt="" className="w-full h-full object-cover" />
+                        <Image src={order.buyer.image} alt="" width={40} height={40} className="rounded-full object-cover" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { ListingCard } from '@/components/ui/ListingCard';
 import type { IListing, ICategory } from '@/types/database';
@@ -83,7 +82,7 @@ export default function MarketplacePage() {
                 >
                   <option value="">All Categories</option>
                   {categories.map((cat) => (
-                    <option key={cat._id as any} value={cat._id as any}>{cat.name}</option>
+                    <option key={cat._id as string} value={cat._id as string}>{cat.name}</option>
                   ))}
                 </select>
               </div>
@@ -150,7 +149,7 @@ export default function MarketplacePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {listings.map((listing) => (
-                <ListingCard key={listing._id as any} listing={listing} />
+                <ListingCard key={listing._id as string} listing={listing} />
               ))}
             </div>
           )}

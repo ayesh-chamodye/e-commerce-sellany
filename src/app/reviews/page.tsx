@@ -12,14 +12,14 @@ function ReviewsForm() {
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
       if (!orderId || !user?.id) return;
       try {
         const orders = await apiFetch('/api/orders?role=buyer');
-        const found = orders.find((o: any) => o.id === orderId);
+        const found = orders.find((o: Record<string, unknown>) => o.id === orderId);
         setOrder(found);
       } catch (error) {
         console.error('Failed to fetch order:', error);

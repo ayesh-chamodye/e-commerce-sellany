@@ -3,17 +3,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
-import type { IMessage } from '@/types/database';
+import type { IMessage, IUser } from '@/types/database';
 import { formatDistanceToNow } from 'date-fns';
+
+const FALLBACK_NOW = Date.now();
 
 export default function ConversationPage() {
   const params = useParams();
   const partnerId = params.id as string;
   const { user, loading } = useSession();
-  const [messages, setMessages] = useState<(IMessage & { sender: any; receiver: any })[]>([]);
-  const [partner, setPartner] = useState<any>(null);
+  const [messages, setMessages] = useState<(IMessage & { sender: IUser; receiver: IUser })[]>([]);
+  const [partner, setPartner] = useState<IUser | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [pageLoading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -26,7 +29,7 @@ export default function ConversationPage() {
         const msgs = await apiFetch(`/api/messages?partnerId=${partnerId}`);
         setMessages(msgs);
         if (msgs.length > 0) {
-          const firstMsg = msgs[0] as any;
+          const firstMsg = msgs[0] as IMessage & { sender: IUser; receiver: IUser };
           const partnerUser = firstMsg.senderId === partnerId ? firstMsg.sender : firstMsg.receiver;
           setPartner(partnerUser);
         }
@@ -81,7 +84,7 @@ export default function ConversationPage() {
             </svg>
           </Link>
           <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden">
-            {partner?.image && <img src={partner.image} alt="" className="w-full h-full object-cover" />}
+             {partner?.image && <Image src={partner.image} alt="" width={40} height={40} className="rounded-full object-cover" />}
           </div>
           <div>
             <h2 className="font-semibold text-gray-900">{partner?.name || 'User'}</h2>
@@ -100,7 +103,7 @@ export default function ConversationPage() {
             </div>
           ) : (
             messages.map((msg) => {
-              const senderId = (msg as any).senderId;
+              const senderId = msg.senderId;
               return (
                 <div
                   key={msg.id}
@@ -119,7 +122,7 @@ export default function ConversationPage() {
                         senderId === user.id ? 'text-indigo-200' : 'text-gray-500'
                       }`}
                     >
-                      {formatDistanceToNow(new Date(msg.createdAt || Date.now()), { addSuffix: true })}
+                       {formatDistanceToNow(new Date(msg.createdAt || FALLBACK_NOW), { addSuffix: true })}
                     </p>
                   </div>
                 </div>

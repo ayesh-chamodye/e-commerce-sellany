@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
 import { updateDocument } from '@/lib/firebase/firestore';
 
 export async function updateUserRole(userId: string, role: 'buyer' | 'seller') {

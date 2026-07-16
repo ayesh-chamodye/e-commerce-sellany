@@ -4,12 +4,10 @@ import {
   collection,
   query,
   where,
-  orderBy,
   limit,
   getDocs,
   setDoc,
   doc,
-  getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { getDocument } from '@/lib/firebase/firestore';
@@ -27,9 +25,9 @@ function matchesFilters(item: Record<string, unknown>, filters: {
   maxPrice?: number;
   featured?: boolean;
 }): boolean {
-  if (filters.categoryId && (item as any).categoryId !== filters.categoryId) return false;
-  if (filters.featured && !(item as any).featured) return false;
-  const price = (item as any).price as number;
+  if (filters.categoryId && (item as Record<string, unknown>).categoryId !== filters.categoryId) return false;
+  if (filters.featured && !(item as Record<string, unknown>).featured) return false;
+  const price = (item as Record<string, unknown>).price as number;
   if (filters.minPrice !== undefined && price < filters.minPrice) return false;
   if (filters.maxPrice !== undefined && price > filters.maxPrice) return false;
   return true;
@@ -49,7 +47,7 @@ export async function GET(request: Request) {
     const maxPrice = maxPriceParam ? parseFloat(maxPriceParam) : undefined;
     const featured = featuredParam === 'true';
 
-    let q = query(collection(db, 'listings'), where('status', '==', 'active'), limit(50));
+    const q = query(collection(db, 'listings'), where('status', '==', 'active'), limit(50));
     const snap = await getDocs(q);
     let listings = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
 
@@ -66,7 +64,7 @@ export async function GET(request: Request) {
 
     const listingsWithSeller = await Promise.all(
       listings.map(async (listing) => {
-        const sellerId = (listing as any).sellerId as string;
+        const sellerId = (listing as Record<string, unknown>).sellerId as string;
         const seller = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${sellerId}`);
         return { ...listing, seller };
       })

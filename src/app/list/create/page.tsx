@@ -64,7 +64,7 @@ export default function CreateListingPage() {
       discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : undefined,
       discountPercentage,
       categoryId: formData.categoryId || undefined,
-      type: formData.type as any,
+      type: formData.type as 'service' | 'goods' | 'account',
       deliveryTime: formData.deliveryTime ? parseInt(formData.deliveryTime) : undefined,
       revisions: formData.revisions ? parseInt(formData.revisions) : undefined,
       tags,

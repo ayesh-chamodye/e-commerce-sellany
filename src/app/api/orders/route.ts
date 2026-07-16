@@ -29,10 +29,10 @@ export async function GET(request: Request) {
 
     const q = query(collection(db, 'orders'), where(field, '==', userId), orderBy('createdAt', 'desc'));
     const snap = await getDocs(q);
-    let orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     const enrichedOrders = await Promise.all(
-      orders.map(async (order: any) => {
+      orders.map(async (order: Record<string, unknown>) => {
         const buyer = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${order.buyerId}`);
         const seller = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${order.sellerId}`);
         const listing = await getDocument<Record<string, unknown>>(`listings/${order.listingId}`);

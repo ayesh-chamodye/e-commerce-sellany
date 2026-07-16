@@ -1,4 +1,4 @@
-import { SignJWT, importPKCS8 } from 'jose';
+import { importPKCS8 } from 'jose';
 
 const FIREBASE_PROJECT_ID = 'sellany-502609';
 const JWKS_URL = `https://firebase.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/publicKeys`;

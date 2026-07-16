@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
+import type { IOrder, IFavorite, IListing, IUser } from '@/types/database';
 
 export default function BuyerDashboardPage() {
   const { user, loading } = useSession();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [orders, setOrders] = useState<(IOrder & { listing?: IListing; seller?: Pick<IUser, 'name'> })[]>([]);
+  const [favorites, setFavorites] = useState<(IFavorite & { listing: IListing })[]>([]);
   const [pageLoading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,12 +77,12 @@ export default function BuyerDashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {orders.map((order: any) => (
+                {orders.map((order) => (
                   <div key={order.id} className="p-4">
                     <div className="flex items-start gap-4">
                       <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                         {order.listing?.images?.[0] && (
-                          <img src={order.listing.images[0]} alt="" className="w-full h-full object-cover" />
+                          <Image src={order.listing.images[0]} alt="" width={64} height={64} className="object-cover" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -118,7 +120,7 @@ export default function BuyerDashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {favorites.map((fav: any) => (
+                 {favorites.map((fav) => (
                   <Link
                     key={fav.id}
                     href={`/services/${fav.listing?._id || fav.listingId}`}
@@ -126,7 +128,7 @@ export default function BuyerDashboardPage() {
                   >
                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                       {fav.listing?.images?.[0] && (
-                        <img src={fav.listing.images[0]} alt="" className="w-full h-full object-cover" />
+                         <Image src={fav.listing.images[0]} alt="" width={64} height={64} className="object-cover" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

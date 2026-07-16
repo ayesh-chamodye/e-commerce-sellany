@@ -11,7 +11,6 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { getDocument } from '@/lib/firebase/firestore';
 
 export async function GET(request: Request) {
   try {
@@ -32,11 +31,11 @@ export async function GET(request: Request) {
         orderBy('createdAt', 'asc')
       );
       const snap = await getDocs(q);
-      let messages = snap.docs
+      const messages = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((m: any) => (m.senderId === userId && m.receiverId === partnerId) || (m.senderId === partnerId && m.receiverId === userId));
+        .filter((m: Record<string, unknown>) => (m.senderId === userId && m.receiverId === partnerId) || (m.senderId === partnerId && m.receiverId === userId));
 
-      const unreadMessages = messages.filter((m: any) => m.receiverId === userId && !m.read);
+      const unreadMessages = messages.filter((m: Record<string, unknown>) => m.receiverId === userId && !m.read);
       for (const msg of unreadMessages) {
         await updateDoc(doc(db, 'messages', msg.id), { read: true });
       }
@@ -53,9 +52,9 @@ export async function GET(request: Request) {
     const received = snap2.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     const allMessages = [...sent, ...received];
-    const convMap = new Map<string, any>();
+    const convMap = new Map<string, Record<string, unknown>>();
     for (const msg of allMessages) {
-      const partner = (msg as any).senderId === userId ? (msg as any).receiverId : (msg as any).senderId;
+      const partner = (msg as Record<string, unknown>).senderId === userId ? (msg as Record<string, unknown>).receiverId as string : (msg as Record<string, unknown>).senderId as string;
       if (!convMap.has(partner)) {
         convMap.set(partner, {
           partnerId: partner,

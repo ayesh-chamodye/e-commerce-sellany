@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useSession } from '@/components/auth/AuthProvider';
@@ -55,9 +56,9 @@ export function Navbar() {
                 </Link>
                 <div className="relative group">
                   <button className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors">
-                    {profile?.image ? (
-                      <img src={profile.image} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
-                    ) : (
+                       {profile?.image ? (
+                       <Image src={profile.image} alt="Avatar" width={32} height={32} className="rounded-full object-cover" />
+                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
                         {profile?.name?.charAt(0) || user.email?.charAt(0)}
                       </div>

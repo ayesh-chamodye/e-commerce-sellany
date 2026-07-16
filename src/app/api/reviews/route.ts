@@ -9,7 +9,6 @@ import {
   setDoc,
   doc,
   updateDoc,
-  increment,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { getDocument } from '@/lib/firebase/firestore';
@@ -68,7 +67,7 @@ export async function POST(request: Request) {
     const q = query(collection(db, 'reviews'), where('listingId', '==', data.listingId));
     const snap = await getDocs(q);
     const allReviews = snap.docs.map((d) => d.data());
-    const totalRating = allReviews.reduce((sum: number, r: any) => sum + (r.rating as number), 0);
+    const totalRating = allReviews.reduce((sum: number, r: Record<string, unknown>) => sum + (r.rating as number), 0);
     const avgRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
 
     const listingRef = doc(db, 'listings', data.listingId);

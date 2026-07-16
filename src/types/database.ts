@@ -10,7 +10,7 @@ export interface IUser {
   location?: string;
   website?: string;
   phone?: string;
-  accounts?: any[];
+  accounts?: unknown[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -55,7 +55,21 @@ export interface IListing {
   featured: boolean;
   createdAt?: Date;
   updatedAt?: Date;
-  reviews?: (IReview & { reviewer: any })[];
+  reviews?: (IReview & { reviewer: IUser })[];
+}
+
+export interface IConversation {
+  partnerId: string;
+  partner: {
+    name?: string;
+    image?: string;
+    email?: string;
+  };
+  lastMessage: {
+    createdAt: string | Date;
+    senderId: string;
+    content: string;
+  };
 }
 
 export interface IOrder {

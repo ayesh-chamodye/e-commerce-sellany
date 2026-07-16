@@ -20,14 +20,14 @@ export async function GET(
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
     }
 
-    const sellerId = (listing as any).sellerId as string;
+    const sellerId = (listing as Record<string, unknown>).sellerId as string;
     const seller = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${sellerId}`);
 
     const q = query(collection(db, 'reviews'), where('listingId', '==', id));
     const snap = await getDocs(q);
-    let reviews = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const reviews = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    reviews.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    reviews.sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
 
     return NextResponse.json({ ...listing, seller, reviews });
   } catch (error) {
