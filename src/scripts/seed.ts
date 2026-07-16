@@ -1,3 +1,9 @@
+import { connectToDatabase } from '@/lib/mongodb/connection';
+import { User } from '@/models/User';
+import { Category } from '@/models/Category';
+import { Listing } from '@/models/Listing';
+import { Review } from '@/models/Review';
+
 async function seed() {
   try {
     await connectToDatabase();
