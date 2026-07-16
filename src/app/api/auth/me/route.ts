@@ -13,6 +13,9 @@ export async function POST(request: Request) {
     const payload = await verifyFirebaseToken(idToken);
     const uid = payload.sub;
 
+    const { searchParams } = new URL(request.url);
+    const intendedRole = searchParams.get('role') === 'seller' ? 'seller' : 'buyer';
+
     const user = await getDocument<{
       id: string;
       email: string;
@@ -26,7 +29,7 @@ export async function POST(request: Request) {
         email: payload.email,
         name: payload.name,
         image: payload.picture,
-        role: 'buyer',
+        role: intendedRole,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

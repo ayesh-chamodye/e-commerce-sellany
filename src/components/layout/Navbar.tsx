@@ -91,8 +91,8 @@ export function Navbar() {
                 <Link href="/auth/signin" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">
                   Sign In
                 </Link>
-                <Link href="/auth/signin" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
-                  Get Started
+                <Link href="/auth/register" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                  Start Selling
                 </Link>
               </div>
             )}
@@ -129,9 +129,14 @@ export function Navbar() {
               Inbox
             </Link>
             {!user && (
-              <Link href="/auth/signin" className="block text-sm font-medium text-indigo-600">
-                Sign In
-              </Link>
+              <>
+                <Link href="/auth/signin" className="block text-sm font-medium text-indigo-600">
+                  Sign In
+                </Link>
+                <Link href="/auth/register" className="block text-sm font-medium text-indigo-600">
+                  Start Selling
+                </Link>
+              </>
             )}
           </div>
         </div>

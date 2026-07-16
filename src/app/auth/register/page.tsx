@@ -6,7 +6,7 @@ import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useSession } from '@/components/auth/AuthProvider';
 import Link from 'next/link';
 
-function SignInContent() {
+function RegisterContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading } = useSession();
@@ -23,12 +23,12 @@ function SignInContent() {
   const handleGoogleSignIn = async () => {
     setSignInError(null);
     try {
-      sessionStorage.setItem('sellany_intended_role', 'buyer');
+      sessionStorage.setItem('sellany_intended_role', 'seller');
       await signInWithGoogle();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to sign in with Google';
+      const message = err instanceof Error ? err.message : 'Failed to sign up with Google';
       setSignInError(message);
-      console.error('Google sign-in error:', err);
+      console.error('Google sign-up error:', err);
     }
   };
 
@@ -42,13 +42,13 @@ function SignInContent() {
             </div>
             <span className="font-bold text-2xl text-gray-900">SellAny</span>
           </Link>
-          <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-          <p className="mt-2 text-gray-600">Sign in to buy services, goods, and accounts</p>
+          <h2 className="text-3xl font-bold text-gray-900">Start selling</h2>
+          <p className="mt-2 text-gray-600">Create a seller account and list your services, goods, or accounts</p>
         </div>
 
         {(error || signInError) && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
-            <p className="font-semibold mb-1">Sign in failed</p>
+            <p className="font-semibold mb-1">Sign up failed</p>
             <p>{errorDescription || error || signInError}</p>
           </div>
         )}
@@ -66,7 +66,7 @@ function SignInContent() {
               />
               <path
                 fill="#34A853"
-                d="M12 23c2.97 0 5.46-1 7.28-2.69l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                d="M12 23c2.97 0 5.46-1 7.28-2.69l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53, 7.7 23 12 23z"
               />
               <path
                 fill="#FBBC05"
@@ -78,15 +78,15 @@ function SignInContent() {
               />
             </svg>
             <span className="text-gray-700 font-medium">
-              {loading ? 'Signing in...' : 'Continue with Google'}
+              {loading ? 'Creating account...' : 'Continue with Google'}
             </span>
           </button>
         </div>
 
         <p className="mt-6 text-center text-sm text-gray-600">
-          Want to sell?{' '}
-          <Link href="/auth/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
-            Create a seller account
+          Already have an account?{' '}
+          <Link href="/auth/signin" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            Sign in
           </Link>
         </p>
       </div>
@@ -94,7 +94,7 @@ function SignInContent() {
   );
 }
 
-export default function SignInPage() {
+export default function RegisterPage() {
   return (
     <Suspense
       fallback={
@@ -106,7 +106,7 @@ export default function SignInPage() {
         </div>
       }
     >
-      <SignInContent />
+      <RegisterContent />
     </Suspense>
   );
 }

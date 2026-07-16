@@ -30,8 +30,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFirebaseUser(fbUser);
       if (fbUser) {
         try {
+          const intendedRole = sessionStorage.getItem('sellany_intended_role');
+          const url = intendedRole ? `/api/auth/me?role=${encodeURIComponent(intendedRole)}` : '/api/auth/me';
+          sessionStorage.removeItem('sellany_intended_role');
+
           const idToken = await fbUser.getIdToken();
-          const res = await fetch('/api/auth/me', {
+          const res = await fetch(url, {
             headers: { Authorization: `Bearer ${idToken}` },
           });
           if (res.ok) {
