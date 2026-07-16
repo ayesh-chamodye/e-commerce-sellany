@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
 import { getDocument, setDocument } from '@/lib/firebase/firestore';
 
+export async function GET(request: Request) {
+  return POST(request);
+}
+
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');

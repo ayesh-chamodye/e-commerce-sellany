@@ -10,6 +10,9 @@ import {
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
+  provider.addScope('profile');
+  provider.addScope('email');
+  provider.setCustomParameters({ prompt: 'select_account' });
   await signInWithRedirect(auth, provider);
 }
 

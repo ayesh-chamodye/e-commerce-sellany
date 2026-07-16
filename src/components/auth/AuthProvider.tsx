@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const idToken = await fbUser.getIdToken(true);
         const res = await fetch(url, {
+          method: 'POST',
           headers: { Authorization: `Bearer ${idToken}` },
           cache: 'no-store',
         });
@@ -69,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           const idToken = await fbUser.getIdToken(true);
           const res = await fetch(url, {
+            method: 'POST',
             headers: { Authorization: `Bearer ${idToken}` },
             cache: 'no-store',
           });
