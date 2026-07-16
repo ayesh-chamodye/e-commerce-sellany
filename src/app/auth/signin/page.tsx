@@ -1,20 +1,23 @@
 'use client';
 
 import { Suspense, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/firebase/auth';
+import { useSession } from '@/components/auth/AuthProvider';
 import Link from 'next/link';
 
 function SignInContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user, loading } = useSession();
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
   useEffect(() => {
-    if (error) {
-      console.error('Sign in error', errorDescription || error);
+    if (!loading && user) {
+      router.push('/');
     }
-  }, [error, errorDescription]);
+  }, [user, loading, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -40,7 +43,8 @@ function SignInContent() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <button
             onClick={signInWithGoogle}
-            className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+            disabled={loading}
+            className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5">
               <path
@@ -60,7 +64,9 @@ function SignInContent() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            <span className="text-gray-700 font-medium">Continue with Google</span>
+            <span className="text-gray-700 font-medium">
+              {loading ? 'Signing in...' : 'Continue with Google'}
+            </span>
           </button>
         </div>
       </div>
