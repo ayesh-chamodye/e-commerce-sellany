@@ -13,12 +13,9 @@ export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   try {
     const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-    console.log('Firebase user:', user);
-    return user;
-  } catch (error) {
-    const code = (error as any)?.code;
-    if (code === 'auth/popup-blocked' || code === 'auth/popup-closed') {
+    return result.user;
+  } catch (error: any) {
+    if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
       await signInWithRedirect(auth, provider);
       return null;
     }
