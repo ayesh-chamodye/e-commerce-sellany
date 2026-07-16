@@ -12,12 +12,15 @@ import {
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   try {
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    console.log('Firebase user:', user);
+    return user;
   } catch (error) {
     const code = (error as any)?.code;
     if (code === 'auth/popup-blocked' || code === 'auth/popup-closed') {
       await signInWithRedirect(auth, provider);
-      return;
+      return null;
     }
     throw error;
   }
