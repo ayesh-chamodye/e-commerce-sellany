@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
-import { getDocument } from '@/lib/firebase/firestore';
+import { getDocument, setDocument } from '@/lib/firebase/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +22,16 @@ export async function POST(request: Request) {
     }>(`users/${uid}`);
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      const newUser = {
+        email: payload.email,
+        name: payload.name,
+        image: payload.picture,
+        role: 'buyer',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await setDocument('users', newUser, uid);
+      return NextResponse.json({ user: { ...newUser, id: uid } });
     }
 
     return NextResponse.json({ user: { ...user, id: uid } });
