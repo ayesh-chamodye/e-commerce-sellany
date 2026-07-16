@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { listenToAuth } from '@/lib/firebase/auth';
+import { listenToAuth, getRedirectUser } from '@/lib/firebase/auth';
 
 interface User {
   id: string;
@@ -26,7 +26,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = listenToAuth(async (fbUser) => {
+    let mounted = true;
+
+    const resolveSession = async (fbUser: FirebaseUser | null) => {
+      if (!mounted) return;
       setFirebaseUser(fbUser);
       if (fbUser) {
         try {
@@ -34,25 +37,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const url = intendedRole ? `/api/auth/me?role=${encodeURIComponent(intendedRole)}` : '/api/auth/me';
           sessionStorage.removeItem('sellany_intended_role');
 
-          const idToken = await fbUser.getIdToken();
+          const idToken = await fbUser.getIdToken(true);
           const res = await fetch(url, {
             headers: { Authorization: `Bearer ${idToken}` },
+            cache: 'no-store',
           });
           if (res.ok) {
             const data = await res.json();
             setUser(data.user);
           } else {
+            const text = await res.text();
+            console.error('Failed to load user profile', res.status, text);
             setUser(null);
           }
-        } catch {
+        } catch (error) {
+          console.error('Session resolution error:', error);
           setUser(null);
         }
       } else {
         setUser(null);
       }
-      setLoading(false);
-    });
-    return unsubscribe;
+      if (mounted) setLoading(false);
+    };
+
+    const init = async () => {
+      try {
+        const redirectUser = await getRedirectUser();
+        if (redirectUser) {
+          await resolveSession(redirectUser);
+        }
+      } catch (error) {
+        console.error('Redirect result error:', error);
+      }
+
+      const unsubscribe = listenToAuth(async (fbUser) => {
+        await resolveSession(fbUser);
+      });
+
+      return unsubscribe;
+    };
+
+    const cleanupPromise = init();
+
+    return () => {
+      mounted = false;
+      cleanupPromise.then((unsubscribe) => unsubscribe?.());
+    };
   }, []);
 
   return <AuthContext.Provider value={{ user, firebaseUser, loading }}>{children}</AuthContext.Provider>;

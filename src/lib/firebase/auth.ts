@@ -1,15 +1,26 @@
 import { auth } from './config';
 import {
-  signInWithRedirect,
+  signInWithPopup,
   GoogleAuthProvider,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
+  getRedirectResult,
 } from 'firebase/auth';
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
-  return signInWithRedirect(auth, provider);
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    const code = (error as any)?.code;
+    if (code === 'auth/popup-blocked' || code === 'auth/popup-closed') {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function signOut() {
@@ -18,4 +29,9 @@ export async function signOut() {
 
 export function listenToAuth(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);
+}
+
+export async function getRedirectUser() {
+  const result = await getRedirectResult(auth);
+  return result?.user ?? null;
 }
