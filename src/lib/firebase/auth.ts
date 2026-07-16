@@ -1,6 +1,6 @@
 import { auth } from './config';
 import {
-  signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
@@ -9,7 +9,7 @@ import {
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
-  return signInWithPopup(auth, provider);
+  return signInWithRedirect(auth, provider);
 }
 
 export async function signOut() {
