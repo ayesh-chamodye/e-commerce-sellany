@@ -1,5 +1,6 @@
 import { auth } from './config';
 import {
+  signInWithPopup,
   signInWithRedirect,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
@@ -13,7 +14,17 @@ export async function signInWithGoogle() {
   provider.addScope('profile');
   provider.addScope('email');
   provider.setCustomParameters({ prompt: 'select_account' });
-  await signInWithRedirect(auth, provider);
+
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('popup-closed-by-user') || message.includes('auth/popup-blocked')) {
+      throw error;
+    }
+
+    await signInWithRedirect(auth, provider);
+  }
 }
 
 export async function signOut() {
