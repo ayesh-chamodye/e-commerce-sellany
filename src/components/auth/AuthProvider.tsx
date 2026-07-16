@@ -78,15 +78,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await resolveSession(fbUser);
         }
       });
+
+      return unsubscribe;
     };
 
-    const cleanupPromise = init();
+    let cleanupPromise: Promise<(() => void) | void>;
+
+    const setup = async () => {
+      cleanupPromise = init();
+    };
+
+    setup();
 
     return () => {
       mounted = false;
       cleanupPromise.then((unsub) => {
-        if (unsub) unsub();
-        if (unsubscribe) unsubscribe();
+        if (typeof unsub === 'function') {
+          unsub();
+        }
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
       });
     };
   }, []);
