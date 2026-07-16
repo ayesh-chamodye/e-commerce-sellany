@@ -1,11 +1,24 @@
 import { connectToDatabase } from '@/lib/mongodb/connection';
 import { Category } from '@/models/Category';
 import { Listing } from '@/models/Listing';
+import { User } from '@/models/User';
 
 async function seed() {
   try {
     await connectToDatabase();
     console.log('Connected to MongoDB');
+
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      await User.create({
+        id: '00000000-0000-0000-0000-000000000000',
+        name: 'Demo Seller',
+        email: 'seller@example.com',
+        image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200',
+        role: 'seller',
+      });
+      console.log('Demo seller user created');
+    }
 
     const categoryCount = await Category.countDocuments();
     if (categoryCount === 0) {
