@@ -2,13 +2,13 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
 
 function ReviewsForm() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('order_id');
-  const { data: session } = useSession();
+  const { user } = useSession();
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -16,31 +16,31 @@ function ReviewsForm() {
 
   useEffect(() => {
     const fetchOrder = async () => {
-      if (!orderId || !session?.user?.id) return;
+      if (!orderId || !user?.id) return;
       try {
         const orders = await apiFetch('/api/orders?role=buyer');
-        const found = orders.find((o: any) => o._id === orderId);
+        const found = orders.find((o: any) => o.id === orderId);
         setOrder(found);
       } catch (error) {
         console.error('Failed to fetch order:', error);
       }
     };
     fetchOrder();
-  }, [orderId, session]);
+  }, [orderId, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.user || !orderId || !order) return;
+    if (!user || !orderId || !order) return;
     setSubmitting(true);
 
-    const revieweeId = session.user.id === order.buyerId ? order.sellerId : order.buyerId;
+    const revieweeId = user.id === order.buyerId ? order.sellerId : order.buyerId;
 
     try {
       await apiFetch('/api/reviews', {
         method: 'POST',
         body: JSON.stringify({
           orderId,
-          reviewerId: session.user.id,
+          reviewerId: user.id,
           revieweeId,
           listingId: order.listingId,
           rating,
@@ -57,7 +57,7 @@ function ReviewsForm() {
     }
   };
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -78,7 +78,7 @@ function ReviewsForm() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Leave a Review</h1>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>

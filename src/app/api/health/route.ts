@@ -1,17 +1,16 @@
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { User } from '@/models/User';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import mongoose from 'mongoose';
+import { db } from '@/lib/firebase/config';
+import { collection, getDocs } from 'firebase/firestore';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    await connectToDatabase();
-    const dbState = mongoose.connection.readyState;
+    const snap = await getDocs(collection(db, 'users'));
+    const count = snap.size;
     return NextResponse.json({
       status: 'ok',
-      database: dbState === 1 ? 'connected' : 'disconnected',
+      database: 'connected',
       timestamp: new Date().toISOString(),
+      userCount: count,
     });
   } catch (error) {
     return NextResponse.json(

@@ -2,25 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
 
 export default function SellerDashboardPage() {
-  const { data: session } = useSession();
+  const { user, loading } = useSession();
   const [listings, setListings] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalListings: 0, totalSales: 0, totalRevenue: 0 });
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.id) return;
       try {
         const [listingsData, ordersData] = await Promise.all([
           apiFetch('/api/listings'),
           apiFetch('/api/orders?role=seller'),
         ]);
-        const myListings = listingsData.filter((l: any) => l.sellerId === session.user.id);
+        const myListings = listingsData.filter((l: any) => l.sellerId === user.id);
         setListings(myListings);
         setOrders(ordersData);
         setStats({
@@ -35,9 +35,9 @@ export default function SellerDashboardPage() {
       }
     };
     fetchData();
-  }, [session]);
+  }, [user]);
 
-  if (loading) {
+  if (pageLoading || loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse space-y-6">
@@ -52,7 +52,7 @@ export default function SellerDashboardPage() {
     );
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -70,7 +70,6 @@ export default function SellerDashboardPage() {
         <p className="text-gray-600 mt-1">Manage your listings and orders</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <p className="text-sm font-medium text-gray-500 mb-1">Total Listings</p>
@@ -87,7 +86,6 @@ export default function SellerDashboardPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* My Listings */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">My Listings</h2>
@@ -106,7 +104,7 @@ export default function SellerDashboardPage() {
             ) : (
               <div className="divide-y divide-gray-100">
                 {listings.map((listing) => (
-                  <div key={listing._id as any} className="p-4 flex items-center gap-4">
+                  <div key={listing.id} className="p-4 flex items-center gap-4">
                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                       {listing.images?.[0] && (
                         <img src={listing.images[0]} alt="" className="w-full h-full object-cover" />
@@ -128,7 +126,6 @@ export default function SellerDashboardPage() {
           </div>
         </div>
 
-        {/* Recent Orders */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Recent Orders</h2>
@@ -144,7 +141,7 @@ export default function SellerDashboardPage() {
             ) : (
               <div className="divide-y divide-gray-100">
                 {orders.slice(0, 10).map((order: any) => (
-                  <div key={order._id as any} className="p-4 flex items-center gap-4">
+                  <div key={order.id} className="p-4 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
                       {order.buyer?.image && (
                         <img src={order.buyer.image} alt="" className="w-full h-full object-cover" />

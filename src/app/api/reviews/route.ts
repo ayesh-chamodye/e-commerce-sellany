@@ -1,27 +1,33 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Review } from '@/models/Review';
-import { Listing } from '@/models/Listing';
-import { Order } from '@/models/Order';
-import { authOptions } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  setDoc,
+  doc,
+  updateDoc,
+  increment,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { getDocument } from '@/lib/firebase/firestore';
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const listingId = searchParams.get('listingId');
 
     if (listingId) {
-      const reviews = await Review.find({ listingId })
-        .sort({ createdAt: -1 })
-        .populate('reviewerId', 'name email image')
-        .lean();
+      const q = query(collection(db, 'reviews'), where('listingId', '==', listingId), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      const reviews = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       return NextResponse.json(reviews);
     }
 
@@ -34,41 +40,44 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const userId = payload.sub;
 
-    await connectToDatabase();
     const data = await request.json();
-    const userId = session.user.id;
 
-    const order = await Order.findById(data.orderId);
+    const order = await getDocument<{ buyerId?: string; sellerId?: string }>(`orders/${data.orderId}`);
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
     const revieweeId = userId === order.buyerId ? order.sellerId : order.buyerId;
 
-    const review = await Review.create({
+    const reviewRef = doc(collection(db, 'reviews'));
+    const review = {
       ...data,
       reviewerId: userId,
       revieweeId,
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(reviewRef, review);
+
+    const q = query(collection(db, 'reviews'), where('listingId', '==', data.listingId));
+    const snap = await getDocs(q);
+    const allReviews = snap.docs.map((d) => d.data());
+    const totalRating = allReviews.reduce((sum: number, r: any) => sum + (r.rating as number), 0);
+    const avgRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
+
+    const listingRef = doc(db, 'listings', data.listingId);
+    await updateDoc(listingRef, {
+      rating: Math.round(avgRating * 10) / 10,
+      reviewCount: allReviews.length,
     });
 
-    const avgRating = await Review.aggregate([
-      { $match: { listingId: data.listingId } },
-      { $group: { _id: '$listingId', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
-    ]);
-
-    if (avgRating.length > 0) {
-      await Listing.findByIdAndUpdate(data.listingId, {
-        rating: avgRating[0].avg,
-        reviewCount: avgRating[0].count,
-      });
-    }
-
-    return NextResponse.json(review, { status: 201 });
+    return NextResponse.json({ id: reviewRef.id, ...review }, { status: 201 });
   } catch (error) {
     console.error('Failed to create review:', error);
     return NextResponse.json({ error: 'Failed to create review' }, { status: 500 });

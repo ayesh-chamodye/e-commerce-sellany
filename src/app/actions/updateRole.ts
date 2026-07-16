@@ -1,13 +1,12 @@
 'use server';
 
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { User } from '@/models/User';
 import { revalidatePath } from 'next/cache';
+import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
+import { updateDocument } from '@/lib/firebase/firestore';
 
 export async function updateUserRole(userId: string, role: 'buyer' | 'seller') {
   try {
-    await connectToDatabase();
-    await User.findByIdAndUpdate(userId, { role });
+    await updateDocument('users', { role }, userId);
     revalidatePath('/');
     revalidatePath('/dashboard/seller');
     revalidatePath('/dashboard/buyer');

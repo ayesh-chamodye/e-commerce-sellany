@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
 
 export default function BuyerDashboardPage() {
-  const { data: session } = useSession();
+  const { user, loading } = useSession();
   const [orders, setOrders] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.id) return;
       try {
         const [ordersData, favoritesData] = await Promise.all([
           apiFetch('/api/orders?role=buyer'),
@@ -28,9 +28,9 @@ export default function BuyerDashboardPage() {
       }
     };
     fetchData();
-  }, [session]);
+  }, [user]);
 
-  if (loading) {
+  if (pageLoading || loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse space-y-6">
@@ -41,7 +41,7 @@ export default function BuyerDashboardPage() {
     );
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -60,7 +60,6 @@ export default function BuyerDashboardPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* My Orders */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">My Orders</h2>
@@ -77,7 +76,7 @@ export default function BuyerDashboardPage() {
             ) : (
               <div className="divide-y divide-gray-100">
                 {orders.map((order: any) => (
-                  <div key={order._id as any} className="p-4">
+                  <div key={order.id} className="p-4">
                     <div className="flex items-start gap-4">
                       <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                         {order.listing?.images?.[0] && (
@@ -107,7 +106,6 @@ export default function BuyerDashboardPage() {
           </div>
         </div>
 
-        {/* Favorites */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Favorites</h2>
@@ -122,7 +120,7 @@ export default function BuyerDashboardPage() {
               <div className="divide-y divide-gray-100">
                 {favorites.map((fav: any) => (
                   <Link
-                    key={fav._id as any}
+                    key={fav.id}
                     href={`/services/${fav.listing?._id || fav.listingId}`}
                     className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
                   >

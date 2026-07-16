@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
 import type { IMessage } from '@/types/database';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,17 +11,17 @@ import { formatDistanceToNow } from 'date-fns';
 export default function ConversationPage() {
   const params = useParams();
   const partnerId = params.id as string;
-  const { data: session } = useSession();
+  const { user, loading } = useSession();
   const [messages, setMessages] = useState<(IMessage & { sender: any; receiver: any })[]>([]);
   const [partner, setPartner] = useState<any>(null);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.id) return;
       try {
         const msgs = await apiFetch(`/api/messages?partnerId=${partnerId}`);
         setMessages(msgs);
@@ -37,7 +37,7 @@ export default function ConversationPage() {
       }
     };
     fetchMessages();
-  }, [session, partnerId]);
+  }, [user, partnerId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,7 +45,7 @@ export default function ConversationPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.user || !newMessage.trim()) return;
+    if (!user || !newMessage.trim()) return;
     setSending(true);
 
     const msg = await apiFetch('/api/messages', {
@@ -60,7 +60,7 @@ export default function ConversationPage() {
     setSending(false);
   };
 
-  if (!session) {
+  if (!user || loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -74,7 +74,6 @@ export default function ConversationPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-[calc(100vh-200px)] flex flex-col">
-        {/* Header */}
         <div className="p-4 border-b border-gray-200 flex items-center gap-4">
           <Link href="/inbox" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,9 +89,8 @@ export default function ConversationPage() {
           </div>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {loading ? (
+          {pageLoading ? (
             <div className="flex justify-center py-8">
               <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
             </div>
@@ -105,12 +103,12 @@ export default function ConversationPage() {
               const senderId = (msg as any).senderId;
               return (
                 <div
-                  key={msg._id as any}
-                  className={`flex ${senderId === session.user.id ? 'justify-end' : 'justify-start'}`}
+                  key={msg.id}
+                  className={`flex ${senderId === user.id ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
                     className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      senderId === session.user.id
+                      senderId === user.id
                         ? 'bg-indigo-600 text-white rounded-br-md'
                         : 'bg-gray-100 text-gray-900 rounded-bl-md'
                     }`}
@@ -118,7 +116,7 @@ export default function ConversationPage() {
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                     <p
                       className={`text-xs mt-1 ${
-                        senderId === session.user.id ? 'text-indigo-200' : 'text-gray-500'
+                        senderId === user.id ? 'text-indigo-200' : 'text-gray-500'
                       }`}
                     >
                       {formatDistanceToNow(new Date(msg.createdAt || Date.now()), { addSuffix: true })}
@@ -131,7 +129,6 @@ export default function ConversationPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Message Input */}
         <form onSubmit={handleSend} className="p-4 border-t border-gray-200">
           <div className="flex gap-3">
             <input

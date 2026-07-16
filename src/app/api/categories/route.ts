@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Category } from '@/models/Category';
+import { collection, orderBy, query, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 
 export async function GET() {
   try {
-    await connectToDatabase();
-    const categories = await Category.find().sort({ createdAt: -1 }).lean();
+    const q = query(collection(db, 'categories'), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    const categories = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     return NextResponse.json(categories);
   } catch (error) {
     console.error('Failed to fetch categories:', error);

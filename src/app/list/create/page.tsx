@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import type { ICategory } from '@/types/database';
 import { apiFetch } from '@/lib/api';
 import { createListing } from '@/app/actions/createListing';
 
 export default function CreateListingPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading } = useSession();
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,11 +27,8 @@ export default function CreateListingPage() {
   });
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      const user = session.user as any;
-      if (user.role !== 'seller') {
-        router.push('/');
-      }
+    if (!loading && user?.role !== 'seller') {
+      router.push('/');
     }
     const fetchCategories = async () => {
       try {
@@ -42,25 +39,25 @@ export default function CreateListingPage() {
       }
     };
     fetchCategories();
-  }, [session, status, router]);
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.user) return;
+    if (!user) return;
     setSubmitting(true);
 
     const images = formData.images.split(',').map(img => img.trim()).filter(Boolean);
     const tags = formData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
-    
+
     const youtubeMatch = formData.youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
     const youtubeUrl = youtubeMatch ? youtubeMatch[1] : formData.youtubeUrl;
 
-    const discountPercentage = formData.discountPrice 
-      ? Math.round((1 - parseFloat(formData.discountPrice) / parseFloat(formData.price)) * 100) 
+    const discountPercentage = formData.discountPrice
+      ? Math.round((1 - parseFloat(formData.discountPrice) / parseFloat(formData.price)) * 100)
       : undefined;
 
     await createListing({
-      sellerId: (session.user as any).id,
+      sellerId: user.id,
       title: formData.title,
       description: formData.description,
       price: parseFloat(formData.price),
@@ -79,13 +76,22 @@ export default function CreateListingPage() {
     router.push('/marketplace');
   };
 
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/2" />
           <div className="h-64 bg-gray-200 rounded-xl" />
         </div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'seller') {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+        <p className="text-gray-600">You need to be a seller to create listings.</p>
       </div>
     );
   }
@@ -145,7 +151,7 @@ export default function CreateListingPage() {
             >
               <option value="">Select category</option>
               {categories.map((cat) => (
-                <option key={cat._id as any} value={cat._id as any}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>

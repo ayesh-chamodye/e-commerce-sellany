@@ -17,6 +17,7 @@ export interface IUser {
 
 export interface ICategory {
   _id?: string;
+  id: string;
   name: string;
   slug: string;
   description?: string;
@@ -26,6 +27,7 @@ export interface ICategory {
 
 export interface IListing {
   _id?: string;
+  id: string;
   sellerId: string;
   seller?: {
     name?: string;
@@ -58,6 +60,7 @@ export interface IListing {
 
 export interface IOrder {
   _id?: string;
+  id: string;
   buyerId: string;
   sellerId: string;
   listingId: string;
@@ -72,6 +75,7 @@ export interface IOrder {
 
 export interface IMessage {
   _id?: string;
+  id: string;
   senderId: string;
   receiverId: string;
   orderId?: string;
@@ -85,6 +89,7 @@ export interface IMessage {
 
 export interface IReview {
   _id?: string;
+  id: string;
   orderId: string;
   reviewerId: string;
   revieweeId: string;
@@ -96,6 +101,7 @@ export interface IReview {
 
 export interface IFavorite {
   _id?: string;
+  id: string;
   userId: string;
   listingId: string;
   createdAt?: Date;

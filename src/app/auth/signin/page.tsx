@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signInWithGoogle } from '@/lib/firebase/auth';
 import Link from 'next/link';
 
 function SignInContent() {
@@ -11,8 +11,8 @@ function SignInContent() {
   const errorDescription = searchParams.get('error_description');
 
   useEffect(() => {
-    if (error === 'Callback') {
-      console.error('NextAuth callback error', errorDescription || error);
+    if (error) {
+      console.error('Sign in error', errorDescription || error);
     }
   }, [error, errorDescription]);
 
@@ -39,7 +39,7 @@ function SignInContent() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <button
-            onClick={() => signIn('google', { callbackUrl: '/' })}
+            onClick={signInWithGoogle}
             className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5">

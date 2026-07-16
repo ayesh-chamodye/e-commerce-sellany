@@ -1,70 +1,21 @@
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import { NextResponse } from "next/server";
-import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import { connectToDatabase } from "@/lib/mongodb/connection";
-import { User } from "@/models/User";
-import { getServerSession } from "next-auth";
-
-// @ts-ignore
-function getMongoDBAdapter(): any {
-  // @ts-ignore
-  return MongoDBAdapter({
-    // @ts-ignore
-    db: () => {
-      return connectToDatabase().then((mongoose: any) => mongoose.connection.db);
-    },
-  }) as any;
-}
-
-export const authOptions: any = {
-  adapter: getMongoDBAdapter(),
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
-    }),
-  ],
-  callbacks: {
-    async session({ session, token }: any) {
-      if (session.user) {
-        session.user.id = token.sub!;
-        const user = await User.findById(token.sub).select('role');
-        if (user) {
-          session.user.role = (user as any).role;
-        }
-      }
-      return session;
-    },
-    async jwt({ token, user }: any) {
-      if (user) {
-        token.sub = user.id;
-      }
-      return token;
-    },
-  },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
-  session: {
-    strategy: 'database',
-  },
-};
+import { NextResponse } from 'next/server';
+import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
 
 export async function auth() {
-  return getServerSession(authOptions);
+  const authHeader = process.env.AUTHORIZATION || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  try {
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    return { user: { id: payload.sub, email: payload.email, name: payload.name, image: payload.picture } };
+  } catch {
+    return null;
+  }
 }
 
 export async function requireAuth() {
-  const session = await auth() as any;
+  const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

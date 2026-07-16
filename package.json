@@ -9,16 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@auth/mongodb-adapter": "^3.11.2",
-    "@vercel/blob": "^2.6.1",
     "bcrypt": "^6.0.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
+    "firebase": "^12.16.0",
+    "jose": "^6.2.3",
     "lucide-react": "^1.24.0",
-    "mongoose": "^9.7.4",
     "next": "16.2.10",
-    "next-auth": "^4.24.14",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-youtube": "^10.1.0",

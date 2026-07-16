@@ -2,17 +2,17 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 
 export default function AuthCallbackClient({ error }: { error?: string }) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading } = useSession();
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (!loading && user) {
       router.push('/');
     }
-  }, [session, status, router]);
+  }, [user, loading, router]);
 
   if (error) {
     return (

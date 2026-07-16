@@ -1,24 +1,37 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Favorite } from '@/models/Favorite';
-import { Listing } from '@/models/Listing';
-import { authOptions } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  setDoc,
+  doc,
+  deleteDoc,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { getDocument } from '@/lib/firebase/firestore';
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const userId = payload.sub;
 
-    await connectToDatabase();
-    const favorites = await Favorite.find({ userId: session.user.id })
-      .sort({ createdAt: -1 })
-      .populate('listingId')
-      .lean();
+    const q = query(collection(db, 'favorites'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    const favorites = snap.docs.map(async (d) => {
+      const fav = { id: d.id, ...d.data() };
+      const listing = await getDocument<Record<string, unknown>>(`listings/${(fav as any).listingId}`);
+      return { ...fav, listing };
+    });
 
-    return NextResponse.json(favorites);
+    const results = await Promise.all(favorites);
+    return NextResponse.json(results);
   } catch (error) {
     console.error('Failed to fetch favorites:', error);
     return NextResponse.json({ error: 'Failed to fetch favorites' }, { status: 500 });
@@ -27,22 +40,32 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const userId = payload.sub;
 
-    await connectToDatabase();
     const { listingId } = await request.json();
-    const userId = session.user.id;
 
-    const existing = await Favorite.findOne({ userId, listingId });
-    if (existing) {
-      await Favorite.findByIdAndDelete(existing._id);
+    const q = query(collection(db, 'favorites'), where('userId', '==', userId), where('listingId', '==', listingId));
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      for (const docSnap of snap.docs) {
+        await deleteDoc(docSnap.ref);
+      }
       return NextResponse.json({ favorited: false });
     }
 
-    await Favorite.create({ userId, listingId });
+    const favRef = doc(collection(db, 'favorites'));
+    await setDoc(favRef, {
+      userId,
+      listingId,
+      createdAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({ favorited: true });
   } catch (error) {
     console.error('Failed to toggle favorite:', error);

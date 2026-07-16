@@ -4,16 +4,16 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
 import type { IListing, IReview } from '@/types/database';
 
 export default function ServiceDetailPage() {
   const params = useParams();
-  const { data: session } = useSession();
+  const { user, loading } = useSession();
   const [listing, setListing] = useState<IListing | null>(null);
   const [reviews, setReviews] = useState<(IReview & { reviewer: any })[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showInquiryForm, setShowInquiryForm] = useState(false);
   const [inquiryMessage, setInquiryMessage] = useState('');
@@ -36,7 +36,7 @@ export default function ServiceDetailPage() {
   }, [params.id]);
 
   const handleInquiry = async () => {
-    if (!session?.user || !inquiryMessage.trim()) return;
+    if (!user || !inquiryMessage.trim()) return;
     setSubmitting(true);
     await apiFetch('/api/messages', {
       method: 'POST',
@@ -54,7 +54,7 @@ export default function ServiceDetailPage() {
   };
 
   const handleBuy = async () => {
-    if (!session?.user) {
+    if (!user) {
       alert('Please sign in to purchase');
       return;
     }
@@ -74,7 +74,7 @@ export default function ServiceDetailPage() {
     alert('Order placed successfully! Check your orders.');
   };
 
-  if (loading) {
+  if (pageLoading || loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse">
@@ -103,14 +103,12 @@ export default function ServiceDetailPage() {
   }
 
   const price = listing.discountPrice || listing.price;
-  const isOwner = session?.user?.id === listing.sellerId;
+  const isOwner = user?.id === listing.sellerId;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="grid md:grid-cols-3 gap-8">
-        {/* Left Column - Images & Details */}
         <div className="md:col-span-2 space-y-6">
-          {/* Image Gallery */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="aspect-video relative bg-gray-100">
               {listing.images?.[selectedImage] ? (
@@ -146,7 +144,6 @@ export default function ServiceDetailPage() {
             )}
           </div>
 
-          {/* Video */}
           {(listing.youtubeUrl || listing.videoUrl) && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Video</h3>
@@ -168,11 +165,10 @@ export default function ServiceDetailPage() {
             </div>
           )}
 
-          {/* Description */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Description</h3>
             <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{listing.description}</p>
-            
+
             {listing.tags?.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-6">
                 {listing.tags.map((tag) => (
@@ -199,7 +195,6 @@ export default function ServiceDetailPage() {
             </div>
           </div>
 
-          {/* Reviews */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Reviews ({reviews.length})
@@ -209,7 +204,7 @@ export default function ServiceDetailPage() {
             ) : (
               <div className="space-y-6">
                 {reviews.map((review) => (
-                  <div key={review._id as any} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
+                  <div key={review.id} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
                         {review.reviewer?.image && (
@@ -242,7 +237,6 @@ export default function ServiceDetailPage() {
           </div>
         </div>
 
-        {/* Right Column - Purchase Card */}
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
             <div className="mb-6">

@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
 import type { IMessage } from '@/types/database';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function InboxPage() {
-  const { data: session } = useSession();
+  const { user, loading } = useSession();
   const [conversations, setConversations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchConversations = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.id) return;
       try {
         const convs = await apiFetch('/api/messages');
         setConversations(convs);
@@ -25,9 +25,9 @@ export default function InboxPage() {
       }
     };
     fetchConversations();
-  }, [session]);
+  }, [user]);
 
-  if (!session) {
+  if (!user || loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -44,7 +44,7 @@ export default function InboxPage() {
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Inbox</h1>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {loading ? (
+        {pageLoading ? (
           <div className="p-8 text-center">
             <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
@@ -80,8 +80,8 @@ export default function InboxPage() {
                       {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  <p className={`text-sm truncate ${conv.lastMessage.senderId === session.user.id ? 'text-gray-500' : 'text-gray-700 font-medium'}`}>
-                    {conv.lastMessage.senderId === session.user.id ? 'You: ' : ''}{conv.lastMessage.content}
+                  <p className={`text-sm truncate ${conv.lastMessage.senderId === user.id ? 'text-gray-500' : 'text-gray-700 font-medium'}`}>
+                    {conv.lastMessage.senderId === user.id ? 'You: ' : ''}{conv.lastMessage.content}
                   </p>
                 </div>
               </Link>

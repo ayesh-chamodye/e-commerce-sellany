@@ -1,31 +1,46 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Order } from '@/models/Order';
-import { Listing } from '@/models/Listing';
-import { authOptions } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  setDoc,
+  doc,
+  updateDoc,
+  increment,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { getDocument } from '@/lib/firebase/firestore';
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const userId = payload.sub;
 
-    await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role') || 'buyer';
-    const userId = session.user.id;
+    const field = role === 'seller' ? 'sellerId' : 'buyerId';
 
-    const query = role === 'seller' ? { sellerId: userId } : { buyerId: userId };
-    const orders = await Order.find(query)
-      .sort({ createdAt: -1 })
-      .populate('buyerId', 'name email image')
-      .populate('sellerId', 'name email image')
-      .populate('listingId')
-      .lean();
+    const q = query(collection(db, 'orders'), where(field, '==', userId), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    let orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    return NextResponse.json(orders);
+    const enrichedOrders = await Promise.all(
+      orders.map(async (order: any) => {
+        const buyer = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${order.buyerId}`);
+        const seller = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${order.sellerId}`);
+        const listing = await getDocument<Record<string, unknown>>(`listings/${order.listingId}`);
+        return { ...order, buyer, seller, listing };
+      })
+    );
+
+    return NextResponse.json(enrichedOrders);
   } catch (error) {
     console.error('Failed to fetch orders:', error);
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
@@ -34,23 +49,28 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const userId = payload.sub;
 
-    await connectToDatabase();
     const data = await request.json();
-    const userId = session.user.id;
-    
-    const order = await Order.create({
+
+    const orderRef = doc(collection(db, 'orders'));
+    const order = {
       ...data,
       buyerId: userId,
-    });
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(orderRef, order);
 
-    await Listing.findByIdAndUpdate(data.listingId, { $inc: { sales: 1 } });
+    const listingRef = doc(db, 'listings', data.listingId);
+    await updateDoc(listingRef, { sales: increment(1) });
 
-    return NextResponse.json(order, { status: 201 });
+    return NextResponse.json({ id: orderRef.id, ...order }, { status: 201 });
   } catch (error) {
     console.error('Failed to create order:', error);
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });

@@ -1,54 +1,73 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Listing } from '@/models/Listing';
-import { User } from '@/models/User';
-import { authOptions } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  setDoc,
+  doc,
+  getDoc,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { getDocument } from '@/lib/firebase/firestore';
+
+function matchesSearch(item: Record<string, unknown>, search: string): boolean {
+  const lower = search.toLowerCase();
+  const title = (item.title as string) || '';
+  const description = (item.description as string) || '';
+  return title.toLowerCase().includes(lower) || description.toLowerCase().includes(lower);
+}
+
+function matchesFilters(item: Record<string, unknown>, filters: {
+  categoryId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  featured?: boolean;
+}): boolean {
+  if (filters.categoryId && (item as any).categoryId !== filters.categoryId) return false;
+  if (filters.featured && !(item as any).featured) return false;
+  const price = (item as any).price as number;
+  if (filters.minPrice !== undefined && price < filters.minPrice) return false;
+  if (filters.maxPrice !== undefined && price > filters.maxPrice) return false;
+  return true;
+}
 
 export async function GET(request: Request) {
   try {
-    await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const categoryId = searchParams.get('categoryId') || '';
-    const minPrice = searchParams.get('minPrice');
-    const maxPrice = searchParams.get('maxPrice');
+    const minPriceParam = searchParams.get('minPrice');
+    const maxPriceParam = searchParams.get('maxPrice');
     const sortBy = searchParams.get('sortBy') || 'created_at';
-    const featured = searchParams.get('featured');
+    const featuredParam = searchParams.get('featured');
 
-    let query: any = { status: 'active' };
+    const minPrice = minPriceParam ? parseFloat(minPriceParam) : undefined;
+    const maxPrice = maxPriceParam ? parseFloat(maxPriceParam) : undefined;
+    const featured = featuredParam === 'true';
 
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-      ];
-    }
-    if (categoryId) {
-      query.categoryId = categoryId;
-    }
-    if (minPrice) {
-      query.price = { ...query.price, $gte: parseFloat(minPrice) };
-    }
-    if (maxPrice) {
-      query.price = { ...query.price, $lte: parseFloat(maxPrice) };
-    }
-    if (featured === 'true') {
-      query.featured = true;
-    }
+    let q = query(collection(db, 'listings'), where('status', '==', 'active'), limit(50));
+    const snap = await getDocs(q);
+    let listings = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
 
-    let sort: any = { createdAt: -1 };
-    if (sortBy === 'price_asc') sort = { price: 1 };
-    if (sortBy === 'price_desc') sort = { price: -1 };
+    if (search) listings = listings.filter((item) => matchesSearch(item, search));
+    if (categoryId) listings = listings.filter((item) => matchesFilters(item, { categoryId }));
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      listings = listings.filter((item) => matchesFilters(item, { minPrice, maxPrice }));
+    }
+    if (featured) listings = listings.filter((item) => matchesFilters(item, { featured: true }));
 
-    const listings = await Listing.find(query)
-      .sort(sort)
-      .limit(50)
-      .lean();
+    if (sortBy === 'price_asc') listings.sort((a, b) => (a.price as number) - (b.price as number));
+    else if (sortBy === 'price_desc') listings.sort((a, b) => (b.price as number) - (a.price as number));
+    else listings.sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
 
     const listingsWithSeller = await Promise.all(
       listings.map(async (listing) => {
-        const seller = await User.findById(listing.sellerId).select('name email image').lean();
+        const sellerId = (listing as any).sellerId as string;
+        const seller = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${sellerId}`);
         return { ...listing, seller };
       })
     );
@@ -62,30 +81,36 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const uid = payload.sub;
 
-    const user = session.user;
-    if (user.role !== 'seller') {
+    const user = await getDocument<{ role?: string }>(`users/${uid}`);
+    if (!user || user.role !== 'seller') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await connectToDatabase();
     const data = await request.json();
-    
-    const listing = await Listing.create({
+
+    const listingRef = doc(collection(db, 'listings'));
+    const listing = {
       ...data,
-      sellerId: user.id,
+      sellerId: uid,
       views: 0,
       sales: 0,
       rating: 0,
       reviewCount: 0,
       featured: false,
-    });
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(listingRef, listing);
 
-    return NextResponse.json(listing, { status: 201 });
+    return NextResponse.json({ id: listingRef.id, ...listing }, { status: 201 });
   } catch (error) {
     console.error('Failed to create listing:', error);
     return NextResponse.json({ error: 'Failed to create listing' }, { status: 500 });

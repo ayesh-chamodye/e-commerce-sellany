@@ -1,56 +1,65 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Message } from '@/models/Message';
-import { authOptions } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase/serverAuth';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  setDoc,
+  doc,
+  updateDoc,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { getDocument } from '@/lib/firebase/firestore';
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const userId = payload.sub;
 
-    await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const partnerId = searchParams.get('partnerId');
-    const userId = session.user.id;
 
     if (partnerId) {
-      const messages = await Message.find({
-        $or: [
-          { senderId: userId, receiverId: partnerId },
-          { senderId: partnerId, receiverId: userId },
-        ],
-      })
-        .sort({ createdAt: 1 })
-        .populate('senderId', 'name email image')
-        .populate('receiverId', 'name email image')
-        .lean();
-
-      await Message.updateMany(
-        { receiverId: userId, senderId: partnerId, read: false },
-        { $set: { read: true } }
+      const q = query(
+        collection(db, 'messages'),
+        where('senderId', 'in', [userId, partnerId]),
+        orderBy('createdAt', 'asc')
       );
+      const snap = await getDocs(q);
+      let messages = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((m: any) => (m.senderId === userId && m.receiverId === partnerId) || (m.senderId === partnerId && m.receiverId === userId));
+
+      const unreadMessages = messages.filter((m: any) => m.receiverId === userId && !m.read);
+      for (const msg of unreadMessages) {
+        await updateDoc(doc(db, 'messages', msg.id), { read: true });
+      }
 
       return NextResponse.json(messages);
     }
 
-    const messages = await Message.find({
-      $or: [{ senderId: userId }, { receiverId: userId }],
-    })
-      .sort({ createdAt: -1 })
-      .populate('senderId', 'name email image')
-      .populate('receiverId', 'name email image')
-      .lean();
+    const q = query(collection(db, 'messages'), where('senderId', '==', userId), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    const sent = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
+    const q2 = query(collection(db, 'messages'), where('receiverId', '==', userId), orderBy('createdAt', 'desc'));
+    const snap2 = await getDocs(q2);
+    const received = snap2.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    const allMessages = [...sent, ...received];
     const convMap = new Map<string, any>();
-    for (const msg of messages) {
-      const partnerId = (msg as any).senderId === userId ? (msg as any).receiverId : (msg as any).senderId;
-      if (!convMap.has(partnerId)) {
-        convMap.set(partnerId, {
-          partnerId,
-          partner: (msg as any).senderId === userId ? (msg as any).receiverId : (msg as any).senderId,
+    for (const msg of allMessages) {
+      const partner = (msg as any).senderId === userId ? (msg as any).receiverId : (msg as any).senderId;
+      if (!convMap.has(partner)) {
+        convMap.set(partner, {
+          partnerId: partner,
+          partner,
           lastMessage: msg,
         });
       }
@@ -65,20 +74,26 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as any;
-    if (!session?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const payload = await verifyFirebaseToken(authHeader.split('Bearer ')[1]);
+    const userId = payload.sub;
 
-    await connectToDatabase();
     const data = await request.json();
-    
-    const message = await Message.create({
-      ...data,
-      senderId: session.user.id,
-    });
 
-    return NextResponse.json(message, { status: 201 });
+    const messageRef = doc(collection(db, 'messages'));
+    const message = {
+      ...data,
+      senderId: userId,
+      read: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(messageRef, message);
+
+    return NextResponse.json({ id: messageRef.id, ...message }, { status: 201 });
   } catch (error) {
     console.error('Failed to create message:', error);
     return NextResponse.json({ error: 'Failed to create message' }, { status: 500 });

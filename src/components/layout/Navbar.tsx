@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
+import { signOut } from '@/lib/firebase/auth';
 
 export function Navbar() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const user = session?.user as any;
   const profile = user;
 
   return (
@@ -21,7 +21,7 @@ export function Navbar() {
               </div>
               <span className="font-bold text-xl text-gray-900">SellAny</span>
             </Link>
-            
+
             <div className="hidden md:flex items-center gap-6">
               <Link href="/marketplace" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">
                 Marketplace
@@ -48,7 +48,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            {status === 'authenticated' && session ? (
+            {user && !loading && (
               <div className="flex items-center gap-4">
                 <Link href="/list/create" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                   Start Selling
@@ -59,7 +59,7 @@ export function Navbar() {
                       <img src={profile.image} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                        {profile?.name?.charAt(0) || user?.email?.charAt(0)}
+                        {profile?.name?.charAt(0) || user.email?.charAt(0)}
                       </div>
                     )}
                   </button>
@@ -67,7 +67,7 @@ export function Navbar() {
                     <div className="py-2">
                       <div className="px-4 py-2 border-b border-gray-100">
                         <p className="text-sm font-medium text-gray-900">{profile?.name || 'User'}</p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                       <Link href="/dashboard/seller" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         Dashboard
@@ -85,7 +85,8 @@ export function Navbar() {
                   </div>
                 </div>
               </div>
-            ) : (
+            )}
+            {!user && !loading && (
               <div className="flex items-center gap-3">
                 <Link href="/auth/signin" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">
                   Sign In
@@ -127,7 +128,7 @@ export function Navbar() {
             <Link href="/inbox" className="block text-sm font-medium text-gray-700 hover:text-indigo-600">
               Inbox
             </Link>
-            {!session && (
+            {!user && (
               <Link href="/auth/signin" className="block text-sm font-medium text-indigo-600">
                 Sign In
               </Link>

@@ -2,31 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { updateUserRole } from '@/app/actions/updateRole';
-import type { Session } from 'next-auth';
 
 export default function RoleSelectionPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading } = useSession();
   const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>('buyer');
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      const user = session.user as any;
-      if (user.role && user.role !== 'buyer') {
-        router.push('/');
-      }
+    if (!loading && user?.role && user.role !== 'buyer') {
+      router.push('/');
     }
-  }, [session, status, router]);
+  }, [user, loading, router]);
 
   const handleRoleUpdate = async () => {
-    if (!session?.user) return;
+    if (!user?.id) return;
     setUpdating(true);
-    
+
     try {
-      await updateUserRole((session.user as any).id, selectedRole);
+      await updateUserRole(user.id, selectedRole);
       router.push('/');
     } catch (error) {
       console.error('Failed to update role:', error);
@@ -35,7 +31,7 @@ export default function RoleSelectionPage() {
     }
   };
 
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />

@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/auth/AuthProvider';
 import { apiFetch } from '@/lib/api';
 
 export default function OrdersPage() {
-  const { data: session } = useSession();
+  const { user, loading } = useSession();
   const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchOrders = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.id) return;
       try {
         const data = await apiFetch('/api/orders?role=buyer');
         setOrders(data);
@@ -23,9 +23,9 @@ export default function OrdersPage() {
       }
     };
     fetchOrders();
-  }, [session]);
+  }, [user]);
 
-  if (!session) {
+  if (!user || loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
@@ -37,7 +37,7 @@ export default function OrdersPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
 
-      {loading ? (
+      {pageLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-32 bg-gray-200 rounded-xl animate-pulse" />
@@ -54,7 +54,7 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-4">
           {orders.map((order: any) => (
-            <div key={order._id as any} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <span className={`px-3 py-1 text-sm font-medium rounded-full ${
@@ -71,7 +71,7 @@ export default function OrdersPage() {
                 </div>
                 <span className="text-lg font-bold text-gray-900">${order.totalAmount}</span>
               </div>
-              
+
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   {order.listing?.images?.[0] && (
@@ -81,7 +81,7 @@ export default function OrdersPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{order.listing?.title}</h3>
                   <p className="text-sm text-gray-500">
-                    {session.user.id === order.buyerId ? `Seller: ${order.seller?.name}` : `Buyer: ${order.buyer?.name}`}
+                    {user.id === order.buyerId ? `Seller: ${order.seller?.name}` : `Buyer: ${order.buyer?.name}`}
                   </p>
                 </div>
               </div>

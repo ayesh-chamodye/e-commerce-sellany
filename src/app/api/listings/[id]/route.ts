@@ -1,27 +1,33 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb/connection';
-import { Listing } from '@/models/Listing';
-import { Review } from '@/models/Review';
-import { User } from '@/models/User';
+import { getDocument } from '@/lib/firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
-    const listing = await Listing.findById(id).lean();
-    
+    const listing = await getDocument<Record<string, unknown>>(`listings/${id}`);
+
     if (!listing) {
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
     }
 
-    const seller = await User.findById(listing.sellerId).select('name email image').lean();
-    const reviews = await Review.find({ listingId: id })
-      .sort({ createdAt: -1 })
-      .populate('reviewerId', 'name email image')
-      .lean();
+    const sellerId = (listing as any).sellerId as string;
+    const seller = await getDocument<{ name?: string; email?: string; image?: string }>(`users/${sellerId}`);
+
+    const q = query(collection(db, 'reviews'), where('listingId', '==', id));
+    const snap = await getDocs(q);
+    let reviews = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    reviews.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return NextResponse.json({ ...listing, seller, reviews });
   } catch (error) {
