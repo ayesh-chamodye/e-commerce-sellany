@@ -19,6 +19,10 @@ interface GoogleUserInfo {
 }
 
 async function exchangeCodeForTokens(code: string): Promise<{ access_token: string; id_token: string }> {
+  if (!googleOAuthConfig.clientId || !googleOAuthConfig.clientSecret || !googleOAuthConfig.redirectUri) {
+    throw new Error('Google OAuth is not configured');
+  }
+
   const response = await fetch(googleOAuthConfig.tokenUrl, {
     method: 'POST',
     headers: {
@@ -34,6 +38,8 @@ async function exchangeCodeForTokens(code: string): Promise<{ access_token: stri
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Token exchange failed:', response.status, errorText);
     throw new Error('Failed to exchange code for tokens');
   }
 
@@ -80,16 +86,24 @@ export async function GET(request: NextRequest) {
     const error = request.nextUrl.searchParams.get('error');
 
     if (error) {
+      console.error('Google OAuth error response:', error);
       return NextResponse.redirect(new URL('/auth/signin?error=google_auth_denied', request.url));
     }
 
     if (!code) {
+      console.error('Missing authorization code');
       return NextResponse.redirect(new URL('/auth/signin?error=no_code', request.url));
     }
 
     const storedState = request.cookies.get('google_oauth_state')?.value;
     if (!storedState || state !== storedState) {
+      console.error('Invalid state parameter');
       return NextResponse.redirect(new URL('/auth/signin?error=invalid_state', request.url));
+    }
+
+    if (!googleOAuthConfig.clientId || !googleOAuthConfig.clientSecret || !googleOAuthConfig.redirectUri) {
+      console.error('Google OAuth not configured');
+      return NextResponse.redirect(new URL('/auth/signin?error=not_configured', request.url));
     }
 
     const tokens = await exchangeCodeForTokens(code);
@@ -98,21 +112,25 @@ export async function GET(request: NextRequest) {
     const pendingRole = request.cookies.get('sellany_pending_role')?.value as 'buyer' | 'seller' | undefined;
     const role = pendingRole || 'buyer';
 
-    const userRef = doc(db, 'users', userInfo.sub);
-    const userDoc = await getDoc(userRef);
+    try {
+      const userRef = doc(db, 'users', userInfo.sub);
+      const userDoc = await getDoc(userRef);
 
-    const userData = {
-      uid: userInfo.sub,
-      email: userInfo.email,
-      displayName: userInfo.name,
-      photoURL: userInfo.picture,
-      role,
-      emailVerified: userInfo.email_verified,
-      updatedAt: serverTimestamp(),
-      ...(userDoc.exists() ? {} : { createdAt: serverTimestamp() }),
-    };
+      const userData = {
+        uid: userInfo.sub,
+        email: userInfo.email,
+        displayName: userInfo.name,
+        photoURL: userInfo.picture,
+        role,
+        emailVerified: userInfo.email_verified,
+        updatedAt: serverTimestamp(),
+        ...(userDoc.exists() ? {} : { createdAt: serverTimestamp() }),
+      };
 
-    await setDoc(userRef, userData, { merge: true });
+      await setDoc(userRef, userData, { merge: true });
+    } catch (firestoreError) {
+      console.error('Firestore error:', firestoreError);
+    }
 
     const sessionToken = await createSessionToken(userInfo, role);
 
