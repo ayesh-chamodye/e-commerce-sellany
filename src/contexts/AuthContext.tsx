@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { onAuthStateChangedListener, signOut } from '@/lib/firebase/auth';
 import { apiFetch } from '@/lib/api';
 
@@ -29,6 +29,7 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasSessionUserRef = useRef(false);
 
   const updateUserRole = async (role: string) => {
     if (!user) return;
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Firebase sign out error:', error);
     }
+    hasSessionUserRef.current = false;
     setUser(null);
     window.location.href = '/';
   };
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const sessionUser = await apiFetch<UserProfile | null>('/api/auth/me');
         if (sessionUser) {
           setUser(sessionUser);
+          hasSessionUserRef.current = true;
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -82,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userData = await apiFetch<UserProfile>('/api/auth/me');
           if (userData) {
             setUser(userData);
+            hasSessionUserRef.current = true;
           } else {
             setUser({
               uid: fbUser.uid,
@@ -90,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               photoURL: fbUser.photoURL,
               role: null,
             });
+            hasSessionUserRef.current = true;
           }
         } catch (error) {
           console.error('Failed to fetch user profile:', error);
@@ -100,9 +105,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             photoURL: fbUser.photoURL,
             role: null,
           });
+          hasSessionUserRef.current = true;
         }
       } else {
-        setUser(null);
+        if (!hasSessionUserRef.current) {
+          setUser(null);
+        }
       }
       setLoading(false);
     });
