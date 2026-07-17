@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { registerWithEmail, registerWithGoogle } from '@/lib/firebase/register';
+import { useState, useEffect } from 'react';
+import { registerWithEmail, registerWithGoogle, saveUserRole } from '@/lib/firebase/register';
+import { getRedirectUser } from '@/lib/firebase/auth';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -11,6 +12,33 @@ export default function Register() {
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingRedirect, setCheckingRedirect] = useState(true);
+
+  useEffect(() => {
+    const handleRedirect = async () => {
+      const pendingRole = sessionStorage.getItem('sellany_pending_role') as 'buyer' | 'seller' | null;
+      const user = await getRedirectUser();
+
+      if (user) {
+        try {
+          if (pendingRole) {
+            await saveUserRole(user, pendingRole);
+            sessionStorage.removeItem('sellany_pending_role');
+          }
+          window.location.href = '/dashboard';
+          return;
+        } catch (err: any) {
+          setError(err.message || 'Failed to complete registration');
+          setCheckingRedirect(false);
+          return;
+        }
+      }
+
+      setCheckingRedirect(false);
+    };
+
+    handleRedirect();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +52,7 @@ export default function Register() {
     setLoading(true);
     try {
       await registerWithEmail(name, email, password, role);
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
     } finally {
@@ -34,18 +62,17 @@ export default function Register() {
 
   const handleGoogle = async () => {
     setError(null);
-    setLoading(true);
-    try {
-      const user = await registerWithGoogle(name, role);
-      if (user) {
-        window.location.href = '/';
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign up with Google');
-    } finally {
-      setLoading(false);
-    }
+    sessionStorage.setItem('sellany_pending_role', role);
+    await registerWithGoogle(name, role);
   };
+
+  if (checkingRedirect) {
+    return (
+      <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-sm text-gray-600">Completing sign up...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -187,3 +214,4 @@ export default function Register() {
     </div>
   );
 }
+

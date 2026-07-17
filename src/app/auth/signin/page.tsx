@@ -1,13 +1,25 @@
 'use client';
 
-import { useState } from 'react';
-import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
+import { useState, useEffect } from 'react';
+import { signInWithEmail, signInWithGoogle, getRedirectUser } from '@/lib/firebase/auth';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingRedirect, setCheckingRedirect] = useState(true);
+
+  useEffect(() => {
+    const checkRedirect = async () => {
+      const user = await getRedirectUser();
+      if (user) {
+        window.location.href = '/dashboard';
+      }
+      setCheckingRedirect(false);
+    };
+    checkRedirect();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,7 +27,7 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signInWithEmail(email, password);
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {
@@ -25,18 +37,16 @@ export default function SignIn() {
 
   const handleGoogle = async () => {
     setError(null);
-    setLoading(true);
-    try {
-      const user = await signInWithGoogle();
-      if (user) {
-        window.location.href = '/';
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
-    } finally {
-      setLoading(false);
-    }
+    await signInWithGoogle();
   };
+
+  if (checkingRedirect) {
+    return (
+      <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-sm text-gray-600">Signing you in...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -135,4 +145,5 @@ export default function SignIn() {
     </div>
   );
 }
+
 
