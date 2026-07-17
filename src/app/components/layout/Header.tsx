@@ -2,14 +2,12 @@
 
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { signOut } from '@/lib/firebase/auth';
 
 export function Header() {
   const { user, loading, signOut: authSignOut } = useAuth();
 
   const handleSignOut = async () => {
     await authSignOut();
-    window.location.href = '/';
   };
 
   return (

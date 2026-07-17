@@ -2,8 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChangedListener, signOut } from '@/lib/firebase/auth';
-import { db } from '@/lib/firebase/client';
-import { doc, getDoc } from 'firebase/firestore';
+import { apiFetch } from '@/lib/api';
 
 interface UserProfile {
   uid: string;
@@ -29,20 +28,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleSignOut = async () => {
+    try {
+      await apiFetch('/api/auth/me', { method: 'DELETE' });
+    } catch (error) {
+      console.error('Session clear error:', error);
+    }
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Firebase sign out error:', error);
+    }
+    setUser(null);
+    window.location.href = '/';
+  };
+
   useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const sessionUser = await apiFetch<UserProfile | null>('/api/auth/me');
+        if (sessionUser) {
+          setUser(sessionUser);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      }
+    };
+
+    initAuth();
+
     const unsubscribe = onAuthStateChangedListener(async (fbUser) => {
       if (fbUser) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUser({
-              uid: fbUser.uid,
-              email: fbUser.email,
-              displayName: data.displayName || fbUser.displayName,
-              photoURL: data.photoURL || fbUser.photoURL,
-              role: data.role,
-            });
+          const userData = await apiFetch<UserProfile>('/api/auth/me');
+          if (userData) {
+            setUser(userData);
           } else {
             setUser({
               uid: fbUser.uid,
@@ -72,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut: handleSignOut }}>
       {children}
     </AuthContext.Provider>
   );

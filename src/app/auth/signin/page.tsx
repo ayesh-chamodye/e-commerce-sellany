@@ -33,7 +33,7 @@ export default function SignIn() {
 
   const handleGoogle = async () => {
     setError(null);
-    window.location.href = '/auth/callback';
+    window.location.href = '/api/auth/google';
   };
 
   return (

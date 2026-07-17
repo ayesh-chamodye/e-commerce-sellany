@@ -56,8 +56,8 @@ export default function Register() {
 
   const handleGoogle = async () => {
     setError(null);
-    sessionStorage.setItem('sellany_pending_role', role);
-    window.location.href = '/auth/callback';
+    document.cookie = `sellany_pending_role=${role}; path=/; max-age=600`;
+    window.location.href = '/api/auth/google';
   };
 
   return (
