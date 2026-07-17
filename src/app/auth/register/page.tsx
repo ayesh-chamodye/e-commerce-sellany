@@ -1,44 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { registerWithEmail, registerWithGoogle, saveUserRole } from '@/lib/firebase/register';
-import { getRedirectUser } from '@/lib/firebase/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import { registerWithEmail, saveUserRole } from '@/lib/firebase/register';
 
 export default function Register() {
+  const { user, loading } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [checkingRedirect, setCheckingRedirect] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const handleRedirect = async () => {
+    const finishRedirect = async () => {
+      if (submitting) return;
       const pendingRole = sessionStorage.getItem('sellany_pending_role') as 'buyer' | 'seller' | null;
-      const user = await getRedirectUser();
-
-      if (user) {
+      if (user && !loading) {
+        setSubmitting(true);
         try {
           if (pendingRole) {
             await saveUserRole(user, pendingRole);
             sessionStorage.removeItem('sellany_pending_role');
           }
           window.location.href = '/dashboard';
-          return;
         } catch (err: any) {
           setError(err.message || 'Failed to complete registration');
-          setCheckingRedirect(false);
-          return;
+          setSubmitting(false);
         }
       }
-
-      setCheckingRedirect(false);
     };
-
-    handleRedirect();
-  }, []);
+    finishRedirect();
+  }, [user, loading, submitting]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,30 +44,21 @@ export default function Register() {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       await registerWithEmail(name, email, password, role);
       window.location.href = '/dashboard';
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
-    } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   const handleGoogle = async () => {
     setError(null);
     sessionStorage.setItem('sellany_pending_role', role);
-    await registerWithGoogle(name, role);
+    window.location.href = '/auth/callback';
   };
-
-  if (checkingRedirect) {
-    return (
-      <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="text-sm text-gray-600">Completing sign up...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -163,10 +149,10 @@ export default function Register() {
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {submitting ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
           <div className="relative my-6">
@@ -180,7 +166,7 @@ export default function Register() {
           <button
             type="button"
             onClick={handleGoogle}
-            disabled={loading}
+            disabled={submitting}
             className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -214,4 +200,3 @@ export default function Register() {
     </div>
   );
 }
-

@@ -3,7 +3,6 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithRedirect,
-  User,
 } from 'firebase/auth';
 import { db } from './client';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -35,7 +34,7 @@ export async function registerWithGoogle(name: string, role: 'buyer' | 'seller')
   await signInWithRedirect(auth, provider);
 }
 
-export async function saveUserRole(user: User, role: 'buyer' | 'seller') {
+export async function saveUserRole(user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null }, role: 'buyer' | 'seller') {
   await setDoc(doc(db, 'users', user.uid), {
     uid: user.uid,
     email: user.email,
