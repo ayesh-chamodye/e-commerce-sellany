@@ -1,6 +1,52 @@
 'use client';
 
+import { useState } from 'react';
+import { registerWithEmail, registerWithGoogle } from '@/lib/firebase/register';
+
 export default function Register() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await registerWithEmail(name, email, password, role);
+      window.location.href = '/';
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const user = await registerWithGoogle(name, role);
+      if (user) {
+        window.location.href = '/';
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign up with Google');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
@@ -11,7 +57,12 @@ export default function Register() {
           </p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Full Name
@@ -20,6 +71,8 @@ export default function Register() {
                 id="name"
                 type="text"
                 required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 placeholder="John Doe"
               />
@@ -32,6 +85,8 @@ export default function Register() {
                 id="email"
                 type="email"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 placeholder="you@example.com"
               />
@@ -44,6 +99,8 @@ export default function Register() {
                 id="password"
                 type="password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 placeholder="••••••••"
               />
@@ -56,6 +113,8 @@ export default function Register() {
                 id="confirmPassword"
                 type="password"
                 required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 placeholder="••••••••"
               />
@@ -67,18 +126,20 @@ export default function Register() {
               <select
                 id="role"
                 required
+                value={role}
+                onChange={(e) => setRole(e.target.value as 'buyer' | 'seller')}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition bg-white"
               >
-                <option value="">Select a role</option>
                 <option value="buyer">Buy</option>
                 <option value="seller">Sell</option>
               </select>
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+              disabled={loading}
+              className="w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
-              Create Account
+              {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
           <div className="relative my-6">
@@ -91,7 +152,9 @@ export default function Register() {
           </div>
           <button
             type="button"
-            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            onClick={handleGoogle}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path

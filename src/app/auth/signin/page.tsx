@@ -1,6 +1,43 @@
 'use client';
 
+import { useState } from 'react';
+import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
+
 export default function SignIn() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await signInWithEmail(email, password);
+      window.location.href = '/';
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const user = await signInWithGoogle();
+      if (user) {
+        window.location.href = '/';
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with Google');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
@@ -11,7 +48,12 @@ export default function SignIn() {
           </p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -20,6 +62,8 @@ export default function SignIn() {
                 id="email"
                 type="email"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 placeholder="you@example.com"
               />
@@ -32,15 +76,18 @@ export default function SignIn() {
                 id="password"
                 type="password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 placeholder="••••••••"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+              disabled={loading}
+              className="w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
           <div className="relative my-6">
@@ -53,7 +100,9 @@ export default function SignIn() {
           </div>
           <button
             type="button"
-            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            onClick={handleGoogle}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -86,3 +135,4 @@ export default function SignIn() {
     </div>
   );
 }
+
