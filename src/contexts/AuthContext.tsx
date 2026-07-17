@@ -16,17 +16,36 @@ interface AuthContextValue {
   user: UserProfile | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  updateUserRole: (role: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
   signOut: async () => {},
+  updateUserRole: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const updateUserRole = async (role: string) => {
+    if (!user) return;
+    try {
+      const response = await fetch('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid, role }),
+      });
+
+      if (response.ok) {
+        setUser({ ...user, role });
+      }
+    } catch (error) {
+      console.error('Update role error:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -92,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut: handleSignOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut: handleSignOut, updateUserRole }}>
       {children}
     </AuthContext.Provider>
   );
