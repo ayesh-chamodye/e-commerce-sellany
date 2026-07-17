@@ -4,7 +4,7 @@ export const googleOAuthConfig = {
   authorizationUrl: 'https://accounts.google.com/o/oauth2/auth',
   tokenUrl: 'https://oauth2.googleapis.com/token',
   userInfoUrl: 'https://www.googleapis.com/oauth2/v3/userinfo',
-  redirectUri: process.env.GOOGLE_REDIRECT_URI || '',
+  redirectUri: process.env.GOOGLE_REDIRECT_URI || (process.env.NODE_ENV === 'production' ? 'https://e-commerce-sellany.vercel.app/api/auth/callback/google' : 'http://localhost:3000/api/auth/callback/google'),
   scopes: ['openid', 'profile', 'email'],
 };
 
