@@ -4,6 +4,8 @@ import {
   GoogleAuthProvider,
   signInWithRedirect,
   getRedirectResult,
+  onAuthStateChanged,
+  signOut as firebaseSignOut,
 } from 'firebase/auth';
 
 export async function signInWithEmail(email: string, password: string) {
@@ -24,4 +26,12 @@ export async function getRedirectUser() {
     console.error('getRedirectResult error:', error);
     return null;
   }
+}
+
+export function onAuthStateChangedListener(callback: (user: any) => void) {
+  return onAuthStateChanged(auth, callback);
+}
+
+export async function signOut() {
+  await firebaseSignOut(auth);
 }
