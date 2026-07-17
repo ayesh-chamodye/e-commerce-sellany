@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CreateListingPage() {
@@ -11,15 +12,55 @@ export default function CreateListingPage() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('general');
-  const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'seller')) {
       router.push('/dashboard');
     }
   }, [user, loading, router]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const data = await response.json();
+        uploadedUrls.push(data.url);
+      }
+
+      setImages((prev) => [...prev, ...uploadedUrls]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to upload images';
+      setError(message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +81,7 @@ export default function CreateListingPage() {
           description,
           price: parseFloat(price),
           category,
-          images: imageUrl ? [imageUrl] : [],
+          images,
           sellerId: user?.uid,
           sellerName: user?.displayName || user?.email || 'Anonymous',
         }),
@@ -135,20 +176,29 @@ export default function CreateListingPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Image URL (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
             <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
-              placeholder="https://example.com/image.jpg"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleUpload}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
             />
+            {uploading && <p className="text-sm text-gray-500 mt-2">Uploading...</p>}
+            {images.length > 0 && (
+              <div className="flex gap-2 mt-3 flex-wrap">
+                {images.map((url, idx) => (
+                  <Image key={idx} src={url} alt="" width={96} height={96} className="w-24 h-24 object-cover rounded-lg border border-gray-200" unoptimized />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || uploading}
               className="px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
               {submitting ? 'Creating...' : 'Create Listing'}

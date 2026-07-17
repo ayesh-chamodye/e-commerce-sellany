@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function SellerDashboard() {
@@ -32,35 +33,38 @@ export default function SellerDashboard() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Sales</h3>
-          <p className="text-3xl font-bold text-indigo-600">$0</p>
-          <p className="text-sm text-gray-500 mt-1">All time</p>
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Listings</h3>
-          <p className="text-3xl font-bold text-purple-600">0</p>
-          <p className="text-sm text-gray-500 mt-1">Items for sale</p>
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <Link href="/dashboard/seller/listings" className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">My Listings</h3>
+          <p className="text-3xl font-bold text-purple-600">Manage</p>
+          <p className="text-sm text-gray-500 mt-1">Your active listings</p>
+        </Link>
+        <Link href="/dashboard/seller/orders" className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Orders</h3>
-          <p className="text-3xl font-bold text-green-600">0</p>
-          <p className="text-sm text-gray-500 mt-1">Pending orders</p>
-        </div>
+          <p className="text-3xl font-bold text-green-600">Track</p>
+          <p className="text-sm text-gray-500 mt-1">Incoming orders</p>
+        </Link>
+        <Link href="/listings/create" className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Create Listing</h3>
+          <p className="text-3xl font-bold text-indigo-600">New</p>
+          <p className="text-sm text-gray-500 mt-1">Add a new listing</p>
+        </Link>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-            Create New Listing
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            View Orders
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            Manage Listings
-          </button>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Stats</h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div>
+            <p className="text-sm text-gray-500">Total Sales</p>
+            <p className="text-2xl font-bold text-gray-900">$0</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Active Listings</p>
+            <p className="text-2xl font-bold text-gray-900">0</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Pending Orders</p>
+            <p className="text-2xl font-bold text-gray-900">0</p>
+          </div>
         </div>
       </div>
     </div>

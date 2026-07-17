@@ -7,7 +7,7 @@ export interface Listing {
   images: string[];
   sellerId: string;
   sellerName: string;
-  status: 'active' | 'sold' | 'draft';
+  status: 'active' | 'sold' | 'draft' | 'inactive';
   createdAt: Date;
   updatedAt: Date;
 }
