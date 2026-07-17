@@ -6,6 +6,7 @@ import {
   getRedirectResult,
   onAuthStateChanged,
   signOut as firebaseSignOut,
+  User,
 } from 'firebase/auth';
 
 export async function signInWithEmail(email: string, password: string) {
@@ -28,7 +29,7 @@ export async function getRedirectUser() {
   }
 }
 
-export function onAuthStateChangedListener(callback: (user: any) => void) {
+export function onAuthStateChangedListener(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);
 }
 

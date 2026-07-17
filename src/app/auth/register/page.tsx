@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { registerWithEmail, saveUserRole } from '@/lib/firebase/register';
+import { registerWithEmail } from '@/lib/firebase/register';
 
 export default function Register() {
   const { user, loading } = useAuth();
@@ -15,27 +15,12 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const finishRedirect = async () => {
-      if (submitting) return;
-      const pendingRole = sessionStorage.getItem('sellany_pending_role') as 'buyer' | 'seller' | null;
-      if (user && !loading) {
-        setSubmitting(true);
-        try {
-          if (pendingRole) {
-            await saveUserRole(user, pendingRole);
-            sessionStorage.removeItem('sellany_pending_role');
-          }
-          window.location.href = '/dashboard';
-        } catch (err: any) {
-          setError(err.message || 'Failed to complete registration');
-          setSubmitting(false);
-        }
-      }
-    };
-    finishRedirect();
-  }, [user, loading, submitting]);
+    if (!loading && user) {
+      window.location.href = '/dashboard';
+    }
+  }, [user, loading]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
@@ -48,8 +33,10 @@ export default function Register() {
     try {
       await registerWithEmail(name, email, password, role);
       window.location.href = '/dashboard';
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create account';
+      setError(message);
+    } finally {
       setSubmitting(false);
     }
   };
@@ -59,6 +46,14 @@ export default function Register() {
     document.cookie = `sellany_pending_role=${role}; path=/; max-age=600`;
     window.location.href = '/api/auth/google';
   };
+
+  if (loading || user) {
+    return (
+      <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-sm text-gray-600">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

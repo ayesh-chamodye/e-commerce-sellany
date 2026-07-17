@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { googleOAuthConfig } from '@/lib/googleOAuth';
 import { db } from '@/lib/firebase/client';
 import { doc, getDoc } from 'firebase/firestore';
 import { SignJWT, jwtVerify } from 'jose';
@@ -36,7 +35,7 @@ export async function GET(request: NextRequest) {
           email: payload.email as string,
           displayName: payload.name as string,
           photoURL: payload.picture as string,
-          role: data.role || payload.role,
+          role: data.role || payload.role as string,
         });
       }
 
@@ -47,7 +46,7 @@ export async function GET(request: NextRequest) {
         photoURL: payload.picture as string,
         role: payload.role as string,
       });
-    } catch (jwtError) {
+    } catch {
       return NextResponse.json<UserProfile | null>(null, { status: 200 });
     }
   } catch (error) {

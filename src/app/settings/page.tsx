@@ -6,8 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function SettingsPage() {
   const { user, loading, updateUserRole } = useAuth();
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('buyer');
+  const [name, setName] = useState(user?.displayName || '');
+  const [role, setRole] = useState(user?.role || 'buyer');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -17,13 +17,6 @@ export default function SettingsPage() {
     }
   }, [user, loading]);
 
-  useEffect(() => {
-    if (user) {
-      setName(user.displayName || '');
-      setRole(user.role || 'buyer');
-    }
-  }, [user]);
-
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -32,7 +25,7 @@ export default function SettingsPage() {
       await updateUserRole(role);
       setMessage('Settings saved successfully!');
       setTimeout(() => setMessage(null), 3000);
-    } catch (error) {
+    } catch {
       setMessage('Failed to save settings');
     } finally {
       setSaving(false);
