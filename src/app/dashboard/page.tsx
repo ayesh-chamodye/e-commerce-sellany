@@ -1,10 +1,27 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function DashboardPage() {
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      window.location.href = '/auth/signin';
+      return;
+    }
+
+    const target = user.role === 'seller' ? '/dashboard/seller' : '/dashboard/buyer';
+    window.location.href = target;
+  }, [user, loading]);
+
   return (
-    <div className="flex flex-col">
-      <section className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ij48cGF0aCBk
-PSJNIDYwIDAgTCAwIDAgMCA2MCIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
-</section>
-</div>
+    <div className="min-h-full flex items-center justify-center">
+      <div className="text-sm text-gray-600">Redirecting to your dashboard...</div>
+    </div>
   );
 }
+
