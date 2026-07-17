@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChangedListener, signOut } from '@/lib/firebase/auth';
 import { apiFetch } from '@/lib/api';
 
@@ -29,7 +29,6 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const hasSessionUserRef = useRef(false);
 
   const updateUserRole = async (role: string) => {
     if (!user) return;
@@ -59,33 +58,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Firebase sign out error:', error);
     }
-    hasSessionUserRef.current = false;
     setUser(null);
     window.location.href = '/';
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
       try {
         const sessionUser = await apiFetch<UserProfile | null>('/api/auth/me');
-        if (sessionUser) {
+        if (mounted && sessionUser) {
           setUser(sessionUser);
-          hasSessionUserRef.current = true;
         }
       } catch (error) {
         console.error('Session check error:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     initAuth();
 
     const unsubscribe = onAuthStateChangedListener(async (fbUser) => {
+      if (!mounted) return;
+
       if (fbUser) {
         try {
           const userData = await apiFetch<UserProfile>('/api/auth/me');
           if (userData) {
             setUser(userData);
-            hasSessionUserRef.current = true;
           } else {
             setUser({
               uid: fbUser.uid,
@@ -94,7 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               photoURL: fbUser.photoURL,
               role: null,
             });
-            hasSessionUserRef.current = true;
           }
         } catch (error) {
           console.error('Failed to fetch user profile:', error);
@@ -105,17 +108,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             photoURL: fbUser.photoURL,
             role: null,
           });
-          hasSessionUserRef.current = true;
-        }
-      } else {
-        if (!hasSessionUserRef.current) {
-          setUser(null);
         }
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   return (
