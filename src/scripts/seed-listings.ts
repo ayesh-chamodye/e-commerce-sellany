@@ -159,7 +159,7 @@ const mockListings = [
     description: "Comprehensive SEO audit of your website. Includes technical analysis, keyword research, competitor analysis, and actionable recommendations.",
     price: 199,
     category: "services",
-    images: ["https://images.unsplash.com/photo-1432436466556-c2845ab9b324?w=800&h=600&fit=crop"],
+    images: ["https://images.unsplash.com/photo-1543286386-713b5a19c3aa?w=800&h=600&fit=crop"],
     sellerId: "mock-seller-7",
     sellerName: "SEO Masters",
     status: "active",
