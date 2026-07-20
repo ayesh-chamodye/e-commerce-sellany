@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { Listing } from '@/types/database';
+import { ProductCard } from '@/app/components/marketplace/ProductCard';
 
 const categories = ['All', 'Services', 'Products', 'Accounts', 'Digital', 'Other'];
 
@@ -92,38 +93,7 @@ export default function MarketplacePage() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
-            <div
-              key={listing.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
-            >
-              {listing.images && listing.images.length > 0 ? (
-                <Image
-                  src={listing.images[0]}
-                  alt={listing.title}
-                  width={400}
-                  height={300}
-                  className="w-full h-48 object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-full h-48 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                  <span className="text-4xl">📦</span>
-                </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{listing.title}</h3>
-                  <span className="text-lg font-bold text-indigo-600 ml-2">${listing.price}</span>
-                </div>
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{listing.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 capitalize bg-gray-100 px-2 py-1 rounded">
-                    {listing.category}
-                  </span>
-                  <span className="text-xs text-gray-500">by {listing.sellerName}</span>
-                </div>
-              </div>
-            </div>
+            <ProductCard key={listing.id} listing={listing} />
           ))}
         </div>
       )}
