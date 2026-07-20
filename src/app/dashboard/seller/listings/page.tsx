@@ -150,14 +150,17 @@ export default function SellerListingsPage() {
                         <option value="inactive">Inactive</option>
                       </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <a href={`/listings/${listing.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
-                        View
-                      </a>
-                      <button onClick={() => handleDelete(listing.id)} className="text-red-600 hover:text-red-900">
-                        Delete
-                      </button>
-                    </td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                       <Link href={`/listings/${listing.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
+                         View
+                       </Link>
+                       <Link href={`/listings/${listing.id}/edit`} className="text-indigo-600 hover:text-indigo-900 mr-3">
+                         Edit
+                       </Link>
+                       <button onClick={() => handleDelete(listing.id)} className="text-red-600 hover:text-red-900">
+                         Delete
+                       </button>
+                     </td>
                   </tr>
                 ))}
               </tbody>

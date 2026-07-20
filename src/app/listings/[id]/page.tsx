@@ -6,10 +6,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Listing } from '@/types/database';
 import { useCart } from '@/hooks/useCart';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -135,6 +137,14 @@ export default function ListingDetailPage() {
             >
               {addedToCart ? 'Added!' : inCart ? 'In Cart' : 'Add to Cart'}
             </button>
+            {user && listing.sellerId === user.uid && (
+              <Link
+                href={`/listings/${listing.id}/edit`}
+                className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Edit
+              </Link>
+            )}
           </div>
 
           <div className="mt-4 text-center">
