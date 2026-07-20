@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, deleteDoc } from 'firebase/firestore';
 import { getServerSession } from '@/lib/api';
 
 export async function PATCH(
@@ -68,10 +68,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await updateDoc(listingRef, {
-      status: 'inactive',
-      updatedAt: serverTimestamp(),
-    });
+    await deleteDoc(listingRef);
 
     return NextResponse.json({ success: true });
   } catch (error) {
