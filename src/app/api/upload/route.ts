@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get('file') as File | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: blob.url, pathname: blob.pathname });
   } catch (error) {
     console.error('Blob upload error:', error);
-    return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to upload image';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

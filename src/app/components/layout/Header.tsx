@@ -4,11 +4,13 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/hooks/useCart';
 
 export function Header() {
   const { user, loading, signOut: authSignOut, updateUserRole } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { getCount } = useCart();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,10 +39,12 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">S</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">SellAny</h1>
+            <Link href="/marketplace" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">S</span>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">SellAny</h1>
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -85,6 +89,13 @@ export function Header() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                       </svg>
                       Marketplace
+                    </Link>
+
+                    <Link href="/cart" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+                      </svg>
+                      Cart {getCount() > 0 && <span className="ml-auto bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">{getCount()}</span>}
                     </Link>
                     
                     <Link href="/orders" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">

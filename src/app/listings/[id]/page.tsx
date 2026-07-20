@@ -1,15 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Listing } from '@/types/database';
+import { useCart } from '@/hooks/useCart';
 
 export default function ListingDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [addedToCart, setAddedToCart] = useState(false);
+  const { addItem, isInCart, getCount } = useCart();
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -33,6 +38,19 @@ export default function ListingDetailPage() {
     }
   }, [params.id]);
 
+  const handleAddToCart = async () => {
+    if (!listing) return;
+    await addItem(listing);
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
+
+  const handleBuyNow = async () => {
+    if (!listing) return;
+    await addItem(listing);
+    router.push('/checkout');
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -48,6 +66,8 @@ export default function ListingDetailPage() {
       </div>
     );
   }
+
+  const inCart = isInCart(listing.id);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -99,12 +119,31 @@ export default function ListingDetailPage() {
           </div>
 
           <div className="flex gap-3">
-            <button className="flex-1 px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+            <button
+              onClick={handleBuyNow}
+              className="flex-1 px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            >
               Buy Now
             </button>
-            <button className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              Add to Favorites
+            <button
+              onClick={handleAddToCart}
+              className={`flex-1 px-6 py-3 border font-medium rounded-lg transition-colors ${
+                addedToCart || inCart
+                  ? 'border-green-500 text-green-700 bg-green-50'
+                  : 'border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {addedToCart ? 'Added!' : inCart ? 'In Cart' : 'Add to Cart'}
             </button>
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link
+              href="/cart"
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              View Cart ({getCount()})
+            </Link>
           </div>
         </div>
       </div>

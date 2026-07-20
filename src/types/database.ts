@@ -43,3 +43,19 @@ export interface Conversation {
   lastMessage: string;
   updatedAt: Date;
 }
+
+export interface CartItem {
+  id: string;
+  userId: string;
+  listingId: string;
+  listing: Listing;
+  quantity: number;
+  createdAt: Date;
+}
+
+export interface Cart {
+  id: string;
+  userId: string;
+  items: CartItem[];
+  updatedAt: Date;
+}
