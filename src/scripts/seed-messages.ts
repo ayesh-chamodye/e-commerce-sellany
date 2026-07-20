@@ -23,16 +23,18 @@ try {
   process.exit(1);
 }
 
+const TARGET_UID = '117471418659526721582';
+
 const mockConversations = [
   {
     id: 'conv-1',
-    participants: ['mock-user-1', 'mock-seller-1'],
+    participants: [TARGET_UID, 'mock-seller-1'],
     lastMessage: 'Is this still available?',
     updatedAt: new Date(),
   },
   {
     id: 'conv-2',
-    participants: ['mock-user-1', 'mock-seller-3'],
+    participants: [TARGET_UID, 'mock-seller-3'],
     lastMessage: 'Can you offer a discount?',
     updatedAt: new Date(),
   },
@@ -41,7 +43,7 @@ const mockConversations = [
 const mockMessages = [
   {
     conversationId: 'conv-1',
-    senderId: 'mock-user-1',
+    senderId: TARGET_UID,
     receiverId: 'mock-seller-1',
     text: 'Hi, is this still available?',
     createdAt: new Date(),
@@ -49,13 +51,13 @@ const mockMessages = [
   {
     conversationId: 'conv-1',
     senderId: 'mock-seller-1',
-    receiverId: 'mock-user-1',
+    receiverId: TARGET_UID,
     text: 'Yes, it is still available!',
     createdAt: new Date(),
   },
   {
     conversationId: 'conv-2',
-    senderId: 'mock-user-1',
+    senderId: TARGET_UID,
     receiverId: 'mock-seller-3',
     text: 'Can you offer a discount?',
     createdAt: new Date(),
