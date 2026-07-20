@@ -44,7 +44,7 @@ export default function SellerDashboard() {
           <p className="text-sm text-gray-500 mt-1">Incoming orders</p>
         </Link>
         <Link href="/listings/create" className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Create Listing</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Add Product</h3>
           <p className="text-3xl font-bold text-indigo-600">New</p>
           <p className="text-sm text-gray-500 mt-1">Add a new listing</p>
         </Link>

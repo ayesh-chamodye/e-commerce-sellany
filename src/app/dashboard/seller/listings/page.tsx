@@ -81,9 +81,17 @@ export default function SellerListingsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Listings</h1>
-        <p className="text-gray-600">Manage your listings and track their performance</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Manage Products</h1>
+          <p className="text-gray-600">Manage your listings and track their performance</p>
+        </div>
+        <Link
+          href="/listings/create"
+          className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          Add Product
+        </Link>
       </div>
 
       {listings.length === 0 ? (
@@ -151,16 +159,16 @@ export default function SellerListingsPage() {
                       </select>
                     </td>
                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                       <Link href={`/listings/${listing.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
-                         View
-                       </Link>
-                       <Link href={`/listings/${listing.id}/edit`} className="text-indigo-600 hover:text-indigo-900 mr-3">
-                         Edit
-                       </Link>
-                       <button onClick={() => handleDelete(listing.id)} className="text-red-600 hover:text-red-900">
-                         Delete
-                       </button>
-                     </td>
+                        <Link href={`/listings/${listing.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
+                          View
+                        </Link>
+                        <Link href={`/listings/${listing.id}/edit`} className="text-indigo-600 hover:text-indigo-900 mr-3">
+                          Edit
+                        </Link>
+                        <button onClick={() => handleDelete(listing.id)} className="text-red-600 hover:text-red-900">
+                          Delete
+                        </button>
+                      </td>
                   </tr>
                 ))}
               </tbody>
