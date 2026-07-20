@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx src/scripts/seed-listings.ts"
+    "seed": "tsx src/scripts/seed-listings.ts",
+    "seed:messages": "tsx src/scripts/seed-messages.ts"
   },
   "dependencies": {
     "@vercel/blob": "^2.6.1",

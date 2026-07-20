@@ -31,7 +31,6 @@ export function Header() {
     if (!user) return;
     const newRole = user.role === 'buyer' ? 'seller' : 'buyer';
     await updateUserRole(newRole);
-    window.location.href = newRole === 'seller' ? '/dashboard/seller' : '/dashboard/buyer';
   };
 
   return (
